@@ -4,6 +4,7 @@ import { Colors, Spacing } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
+import Location from '@/utils/Location';
 
 const InputField = ({ label, icon, placeholder, value, onChange, secureTextEntry = false, error }: any) => {
     const colorScheme = useColorScheme() ?? 'light';
@@ -43,7 +44,47 @@ export default function RegisterScreen() {
         password: '',
         bloodGroup: '',
         location: '',
+        latitude: null as number | null,
+        longitude: null as number | null,
     });
+
+    const handleGetLocation = async () => {
+        setIsLoading(true);
+        try {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                if (Platform.OS === 'web') {
+                    Alert.alert('Info', 'Location detection is optimized for our mobile app. Please enter your location manually.');
+                } else {
+                    Alert.alert('Permission Denied', 'Permission to access location was denied');
+                }
+                return;
+            }
+
+            let location = await Location.getCurrentPositionAsync({});
+            const { latitude, longitude } = location.coords;
+
+            // Reverse geocode to get a readable address
+            let reverseGeocode = await Location.reverseGeocodeAsync({ latitude, longitude });
+            let address = '';
+            if (reverseGeocode.length > 0) {
+                const item = reverseGeocode[0];
+                address = `${item.city || ''}, ${item.region || ''}, ${item.country || ''}`.replace(/^, /, '');
+            }
+
+            setForm({
+                ...form,
+                latitude,
+                longitude,
+                location: address || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+            });
+        } catch (error) {
+            console.error(error);
+            Alert.alert('Error', 'Could not fetch your location. Please enter it manually.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -155,14 +196,25 @@ export default function RegisterScreen() {
                         onChange={(val: string) => updateForm('phone', val)}
                         error={errors.phone}
                     />
-                    <InputField
-                        label="Location"
-                        icon="location-outline"
-                        placeholder="City, India"
-                        value={form.location}
-                        onChange={(val: string) => updateForm('location', val)}
-                        error={errors.location}
-                    />
+                    <View style={styles.inputContainer}>
+                        <View style={styles.labelRow}>
+                            <Text style={[styles.label, { color: theme.text }]}>Location</Text>
+                            <TouchableOpacity onPress={handleGetLocation}>
+                                <Text style={{ color: theme.primary, fontSize: 12, fontWeight: 'bold' }}>Detect My Location</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={[styles.inputWrapper, { backgroundColor: theme.surface, borderColor: errors.location ? theme.error : theme.border }]}>
+                            <Ionicons name="location-outline" size={20} color={errors.location ? theme.error : theme.textSecondary} style={styles.inputIcon} />
+                            <TextInput
+                                style={[styles.input, { color: theme.text }]}
+                                placeholder="City, India"
+                                placeholderTextColor={theme.textSecondary}
+                                value={form.location}
+                                onChangeText={(val) => updateForm('location', val)}
+                            />
+                        </View>
+                        {errors.location ? <Text style={styles.errorText}>{errors.location}</Text> : null}
+                    </View>
 
                     {role === 'Donor' && (
                         <View style={styles.inputContainer}>
@@ -261,6 +313,12 @@ const styles = StyleSheet.create({
     },
     inputContainer: {
         marginBottom: Spacing.md,
+    },
+    labelRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: Spacing.sm,
     },
     label: {
         fontSize: 14,

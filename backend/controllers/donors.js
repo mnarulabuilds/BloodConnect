@@ -23,8 +23,30 @@ exports.getDonors = async (req, res, next) => {
         queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
 
         // Finding resource
-        // Only show users with role 'donor' and who are 'isAvailable'
         const filter = JSON.parse(queryStr);
+
+        // Geospatial filter
+        if (req.query.latitude && req.query.longitude) {
+            const lat = parseFloat(req.query.latitude);
+            const lng = parseFloat(req.query.longitude);
+            const radius = parseFloat(req.query.radius) || 10; // Default 10km
+
+            filter.coordinates = {
+                $near: {
+                    $geometry: {
+                        type: 'Point',
+                        coordinates: [lng, lat]
+                    },
+                    $maxDistance: radius * 1000 // Convert km to meters
+                }
+            };
+
+            // Remove lat/lng/radius from filter so they don't interfere with field matching
+            delete filter.latitude;
+            delete filter.longitude;
+            delete filter.radius;
+        }
+
         filter.role = 'donor';
         filter.isAvailable = true;
 

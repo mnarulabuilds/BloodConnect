@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 // @access  Public
 exports.register = async (req, res, next) => {
     try {
-        const { name, email, password, bloodGroup, location, phone, role } = req.body;
+        const { name, email, password, bloodGroup, location, phone, role, latitude, longitude } = req.body;
 
         // Basic validation
         if (!name || !email || !password || !location || !phone) {
@@ -34,6 +34,14 @@ exports.register = async (req, res, next) => {
             phone,
             role: userRole
         };
+
+        // Add coordinates if provided
+        if (latitude && longitude) {
+            userData.coordinates = {
+                type: 'Point',
+                coordinates: [parseFloat(longitude), parseFloat(latitude)]
+            };
+        }
 
         // Only add bloodGroup if it's a donor
         if (userRole === 'donor') {
@@ -154,7 +162,8 @@ const sendTokenResponse = (user, statusCode, res) => {
             role: user.role,
             phone: user.phone,
             location: user.location,
-            avatar: user.avatar
+            avatar: user.avatar,
+            isAvailable: user.isAvailable
         }
     });
 };

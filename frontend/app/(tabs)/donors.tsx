@@ -1,25 +1,113 @@
 
-import React, { useState, useMemo } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, TextInput, useColorScheme, Animated } from 'react-native';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, TextInput, useColorScheme, Animated, ActivityIndicator, Alert, Linking } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { Colors, Spacing } from '@/constants/theme';
-import { mockDonors, BLOOD_GROUPS, Donor } from '@/constants/data';
+import { BLOOD_GROUPS } from '@/constants/data';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '@/context/AuthContext';
+import axios from 'axios';
+import { Platform } from 'react-native';
+import Location from '@/utils/Location';
+import MapView, { Marker, Callout } from '@/utils/Maps';
+
+interface Donor {
+  id: string;
+  _id: string;
+  name: string;
+  bloodGroup: string;
+  location: string;
+  phone: string;
+  isAvailable: boolean;
+  avatar?: string;
+  coordinates?: {
+    coordinates: [number, number];
+  };
+}
 
 export default function DonorsScreen() {
   const colorScheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const theme = Colors[colorScheme];
 
+  const { user } = useAuth();
+  const [donors, setDonors] = useState<Donor[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isMapMode, setIsMapMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<any>(null);
+
+  useEffect(() => {
+    fetchDonors();
+    getUserLocation();
+  }, [selectedGroup]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchDonors();
+    }, [selectedGroup])
+  );
+
+  const getUserLocation = async () => {
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        let location = await Location.getCurrentPositionAsync({});
+        setUserLocation(location.coords);
+      }
+    } catch (e) {
+      console.log('Error getting location', e);
+    }
+  };
+
+  const fetchDonors = async () => {
+    setIsLoading(true);
+    const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
+    try {
+      let url = `${baseUrl}/donors?role=donor&isAvailable=true`;
+      if (selectedGroup) {
+        url += `&bloodGroup=${encodeURIComponent(selectedGroup)}`;
+      }
+
+      const response = await axios.get(url);
+      setDonors(response.data.data);
+    } catch (error) {
+      console.error('Error fetching donors', error);
+      Alert.alert('Error', 'Failed to load donors');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredDonors = useMemo(() => {
-    return mockDonors.filter(donor => {
-      const matchesSearch = donor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        donor.location.toLowerCase().includes(searchQuery.toLowerCase());
+    return donors.filter(donor => {
+      // Local search filtering
+      const name = donor.name || '';
+      const loc = donor.location || '';
+      const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        loc.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Secondary filter check (backend should already have filtered this, 
+      // but good for UI consistency if there's any lag in state updates)
       const matchesGroup = selectedGroup ? donor.bloodGroup === selectedGroup : true;
-      return matchesSearch && matchesGroup;
+
+      // Ensure only available donors are shown
+      const isDonorAvailable = donor.isAvailable === true;
+
+      return matchesSearch && matchesGroup && isDonorAvailable;
     });
-  }, [searchQuery, selectedGroup]);
+  }, [searchQuery, donors, selectedGroup]);
+
+  const handleCall = (phone: string) => {
+    if (!phone) {
+      Alert.alert('Error', 'Phone number not available for this donor.');
+      return;
+    }
+    Linking.openURL(`tel:${phone}`).catch(err => {
+      Alert.alert('Error', 'Failed to open dialer. Please call manually.');
+      console.error('Linking error:', err);
+    });
+  };
 
   const DonorCard = ({ item }: { item: Donor }) => (
     <View style={[styles.donorCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -35,25 +123,22 @@ export default function DonorsScreen() {
           </View>
         </View>
         <View style={styles.availability}>
-          <View style={[styles.statusDot, { backgroundColor: item.available ? theme.success : theme.error }]} />
-          <Text style={[styles.statusText, { color: item.available ? theme.success : theme.error }]}>
-            {item.available ? 'Available' : 'Busy'}
+          <View style={[styles.statusDot, { backgroundColor: item.isAvailable ? theme.success : theme.error }]} />
+          <Text style={[styles.statusText, { color: item.isAvailable ? theme.success : theme.error }]}>
+            {item.isAvailable ? 'Available' : 'Busy'}
           </Text>
         </View>
       </View>
 
       <View style={styles.donorFooter}>
         <View style={styles.footerDetail}>
-          <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Distance</Text>
-          <Text style={[styles.detailValue, { color: theme.text }]}>{item.distance}</Text>
-        </View>
-        <View style={styles.footerDetail}>
-          <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Last Donated</Text>
-          <Text style={[styles.detailValue, { color: theme.text }]}>{item.lastDonated}</Text>
+          <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Phone</Text>
+          <Text style={[styles.detailValue, { color: theme.text }]}>{item.phone}</Text>
         </View>
         <TouchableOpacity
-          style={[styles.contactButton, { backgroundColor: item.available ? theme.primary : theme.textSecondary }]}
-          disabled={!item.available}
+          style={[styles.contactButton, { backgroundColor: item.isAvailable ? theme.primary : theme.textSecondary }]}
+          disabled={!item.isAvailable}
+          onPress={() => handleCall(item.phone)}
         >
           <Ionicons name="call" size={18} color="#FFF" />
           <Text style={styles.contactButtonText}>Contact</Text>
@@ -65,7 +150,16 @@ export default function DonorsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { backgroundColor: theme.primary }]}>
-        <Text style={styles.headerTitle}>Find Donors</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.headerTitle}>Find Donors</Text>
+          <TouchableOpacity
+            style={styles.toggleBtn}
+            onPress={() => setIsMapMode(!isMapMode)}
+          >
+            <Ionicons name={isMapMode ? "list" : "map"} size={24} color="#FFF" />
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.searchBar}>
           <Ionicons name="search" size={20} color={theme.textSecondary} style={styles.searchIcon} />
           <TextInput
@@ -107,18 +201,87 @@ export default function DonorsScreen() {
         />
       </View>
 
-      <FlatList
-        data={filteredDonors}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => <DonorCard item={item} />}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="search-outline" size={80} color={theme.border} />
-            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No donors found matching your criteria</Text>
-          </View>
-        }
-      />
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={{ marginTop: 10, color: theme.textSecondary }}>Searching for heroes...</Text>
+        </View>
+      ) : isMapMode ? (
+        <View style={styles.mapWrapper}>
+          {Platform.OS === 'web' ? (
+            <View style={styles.webPlaceholder}>
+              <Ionicons name="map-outline" size={64} color={theme.textSecondary} />
+              <Text style={[styles.webPlaceholderText, { color: theme.textSecondary }]}>
+                Interactive Map is available on our Mobile App!
+              </Text>
+              <Text style={{ color: theme.textSecondary, marginTop: 8 }}>
+                Please use the List View for now.
+              </Text>
+              <TouchableOpacity
+                style={[styles.toggleBtn, { backgroundColor: theme.primary, marginTop: 20, width: 150 }]}
+                onPress={() => setIsMapMode(false)}
+              >
+                <Text style={{ color: '#FFF', fontWeight: 'bold' }}>See List View</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <MapView
+              style={styles.map}
+              initialRegion={{
+                latitude: userLocation?.latitude || 28.6139,
+                longitude: userLocation?.longitude || 77.2090,
+                latitudeDelta: 0.1,
+                longitudeDelta: 0.1,
+              }}
+            >
+              {userLocation && (
+                <Marker
+                  coordinate={{
+                    latitude: userLocation.latitude,
+                    longitude: userLocation.longitude,
+                  }}
+                  title="You are here"
+                  pinColor="blue"
+                />
+              )}
+              {filteredDonors.map((donor) => (
+                donor.coordinates && (
+                  <Marker
+                    key={donor._id}
+                    coordinate={{
+                      latitude: donor.coordinates.coordinates[1],
+                      longitude: donor.coordinates.coordinates[0],
+                    }}
+                    title={donor.name}
+                    description={`Blood Group: ${donor.bloodGroup}`}
+                  >
+                    <Callout>
+                      <View style={styles.calloutContainer}>
+                        <Text style={styles.calloutTitle}>{donor.name}</Text>
+                        <Text style={styles.calloutSubtitle}>{donor.bloodGroup} Donor</Text>
+                        <Text style={styles.calloutSubtitle}>{donor.phone}</Text>
+                      </View>
+                    </Callout>
+                  </Marker>
+                )
+              ))}
+            </MapView>
+          )}
+        </View>
+      ) : (
+        <FlatList
+          data={filteredDonors}
+          keyExtractor={item => item._id}
+          renderItem={({ item }) => <DonorCard item={item} />}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="search-outline" size={80} color={theme.border} />
+              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No donors found matching your criteria</Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 }
@@ -134,11 +297,65 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  toggleBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   headerTitle: {
     color: '#FFF',
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: Spacing.md,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mapWrapper: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  map: {
+    width: '100%',
+    height: '100%',
+  },
+  calloutContainer: {
+    padding: 10,
+    minWidth: 150,
+  },
+  calloutTitle: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  calloutSubtitle: {
+    fontSize: 12,
+    color: '#666',
+  },
+  webPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+    backgroundColor: 'rgba(0,0,0,0.02)',
+    borderRadius: 24,
+    margin: Spacing.lg,
+  },
+  webPlaceholderText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginTop: Spacing.md,
   },
   searchBar: {
     flexDirection: 'row',

@@ -8,14 +8,31 @@ import { useAuth } from '@/context/AuthContext';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Image, ActivityIndicator } from 'react-native';
+import Location from '@/utils/Location';
 
 export default function ProfileScreen() {
     const colorScheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
     const theme = Colors[colorScheme];
     const { user, logout, updateUser } = useAuth();
 
-    const [isAvailable, setIsAvailable] = useState(true);
+    const [isAvailable, setIsAvailable] = useState(user?.isAvailable ?? true);
     const [isUploading, setIsUploading] = useState(false);
+    const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
+    const [isUpdatingAvailability, setIsUpdatingAvailability] = useState(false);
+
+    const toggleAvailability = async (value: boolean) => {
+        setIsUpdatingAvailability(true);
+        try {
+            await updateUser({ isAvailable: value });
+            setIsAvailable(value);
+        } catch (error) {
+            Alert.alert('Error', 'Failed to update availability status.');
+            // Revert on error
+            setIsAvailable(!value);
+        } finally {
+            setIsUpdatingAvailability(false);
+        }
+    };
 
     const handleLogout = async () => {
         try {
@@ -54,6 +71,44 @@ export default function ProfileScreen() {
             } finally {
                 setIsUploading(false);
             }
+        }
+    };
+
+    const handleUpdateLocation = async () => {
+        setIsUpdatingLocation(true);
+        try {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                if (Platform.OS === 'web') {
+                    Alert.alert('Info', 'Location detection is optimized for our mobile app.');
+                } else {
+                    Alert.alert('Permission Denied', 'Please enable location permissions in settings.');
+                }
+                return;
+            }
+
+            let location = await Location.getCurrentPositionAsync({});
+            const { latitude, longitude } = location.coords;
+
+            let reverseGeocode = await Location.reverseGeocodeAsync({ latitude, longitude });
+            let address = '';
+            if (reverseGeocode.length > 0) {
+                const item = reverseGeocode[0];
+                address = `${item.city || ''}, ${item.region || ''}, ${item.country || ''}`.replace(/^, /, '');
+            }
+
+            await updateUser({
+                location: address || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+                latitude,
+                longitude
+            } as any);
+
+            Alert.alert('Success', 'Location updated successfully!');
+        } catch (e) {
+            console.error(e);
+            Alert.alert('Error', 'Failed to update location');
+        } finally {
+            setIsUpdatingLocation(false);
         }
     };
 
@@ -110,7 +165,8 @@ export default function ProfileScreen() {
                     </View>
                     <Switch
                         value={isAvailable}
-                        onValueChange={setIsAvailable}
+                        onValueChange={toggleAvailability}
+                        disabled={isUpdatingAvailability}
                         trackColor={{ false: theme.border, true: theme.primary }}
                         thumbColor="#FFF"
                     />
@@ -121,7 +177,12 @@ export default function ProfileScreen() {
                     <OptionItem icon="person-outline" title="Full Name" value={user?.name} />
                     <OptionItem icon="call-outline" title="Phone Number" value={user?.phone || 'Not set'} />
                     <OptionItem icon="water-outline" title="Blood Group" value={user?.bloodGroup} />
-                    <OptionItem icon="location-outline" title="Address" value={user?.location || 'Not set'} />
+                    <OptionItem
+                        icon="location-outline"
+                        title="Address"
+                        value={isUpdatingLocation ? 'Updating location...' : (user?.location || 'Not set')}
+                        onPress={handleUpdateLocation}
+                    />
                 </View>
 
                 <Text style={[styles.sectionTitle, { color: theme.text }]}>Account Settings</Text>

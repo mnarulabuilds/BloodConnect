@@ -11,6 +11,7 @@ interface User {
     phone?: string;
     location?: string;
     avatar?: string;
+    isAvailable?: boolean;
 }
 
 interface AuthContextType {

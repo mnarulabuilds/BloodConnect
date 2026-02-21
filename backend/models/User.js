@@ -30,6 +30,16 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Please add your location']
     },
+    coordinates: {
+        type: {
+            type: String,
+            enum: ['Point']
+        },
+        coordinates: {
+            type: [Number],
+            index: '2dsphere'
+        }
+    },
     phone: {
         type: String,
         required: [true, 'Please add a contact number']

@@ -10,8 +10,16 @@ exports.updateProfile = async (req, res, next) => {
             email: req.body.email,
             phone: req.body.phone,
             location: req.body.location,
-            avatar: req.body.avatar // This will be the base64 string or URL
+            avatar: req.body.avatar,
+            isAvailable: req.body.isAvailable
         };
+
+        if (req.body.latitude && req.body.longitude) {
+            fieldsToUpdate.coordinates = {
+                type: 'Point',
+                coordinates: [parseFloat(req.body.longitude), parseFloat(req.body.latitude)]
+            };
+        }
 
         // Remove undefined fields
         Object.keys(fieldsToUpdate).forEach(
@@ -33,7 +41,8 @@ exports.updateProfile = async (req, res, next) => {
                 role: user.role,
                 phone: user.phone,
                 location: user.location,
-                avatar: user.avatar
+                avatar: user.avatar,
+                isAvailable: user.isAvailable
             }
         });
     } catch (err) {

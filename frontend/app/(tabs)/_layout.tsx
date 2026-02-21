@@ -39,7 +39,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="donors"
         options={{
-          title: 'Fin Donors',
+          title: 'Find Donors',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'search' : 'search-outline'} size={26} color={color} />
           ),
