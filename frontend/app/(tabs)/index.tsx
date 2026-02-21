@@ -6,9 +6,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Link } from 'expo-router';
 
+import { useAuth } from '@/context/AuthContext';
+
 export default function HomeScreen() {
   const colorScheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const theme = Colors[colorScheme];
+  const { user } = useAuth();
 
   const QuickAction = ({ title, icon, color, href }: { title: string; icon: any; color: string; href: string }) => (
     <Link href={href as any} asChild>
@@ -27,7 +30,7 @@ export default function HomeScreen() {
       <View style={[styles.header, { backgroundColor: theme.primary }]}>
         <View style={styles.headerTop}>
           <View>
-            <Text style={styles.greeting}>Hello, Donor!</Text>
+            <Text style={styles.greeting}>Hello, {user?.name.split(' ')[0] || 'Donor'}!</Text>
             <Text style={styles.subGreeting}>Your blood can save lives today.</Text>
           </View>
           <TouchableOpacity style={styles.notificationBtn}>

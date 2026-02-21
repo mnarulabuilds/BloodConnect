@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema({
     },
     bloodGroup: {
         type: String,
-        required: [true, 'Please specify your blood group'],
+        required: false,
         enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
     },
     location: {
@@ -43,11 +43,35 @@ const userSchema = new mongoose.Schema({
         enum: ['donor', 'hospital', 'admin'],
         default: 'donor'
     },
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
+    avatar: {
+        type: String,
+        default: ''
+    },
     createdAt: {
         type: Date,
         default: Date.now
     }
 });
+
+// Generate and hash password token
+userSchema.methods.getResetPasswordToken = function () {
+    const crypto = require('crypto');
+    // Generate token
+    const resetToken = crypto.randomBytes(20).toString('hex');
+
+    // Hash token and set to resetPasswordToken field
+    this.resetPasswordToken = crypto
+        .createHash('sha256')
+        .update(resetToken)
+        .digest('hex');
+
+    // Set expire (10 minutes)
+    this.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+
+    return resetToken;
+};
 
 // Encrypt password using bcrypt
 userSchema.pre('save', async function (next) {

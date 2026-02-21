@@ -1,17 +1,61 @@
 
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Switch, useColorScheme, TextInput, Alert } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Switch, useColorScheme, TextInput, Alert, Platform } from 'react-native';
 import { Colors, Spacing } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
+
+import { useAuth } from '@/context/AuthContext';
+import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { Image, ActivityIndicator } from 'react-native';
 
 export default function ProfileScreen() {
     const colorScheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
     const theme = Colors[colorScheme];
+    const { user, logout, updateUser } = useAuth();
 
     const [isAvailable, setIsAvailable] = useState(true);
-    const [name, setName] = useState('Mayank Kumar');
-    const [phone, setPhone] = useState('+91 98765 43210');
-    const [bloodGroup, setBloodGroup] = useState('A+');
+    const [isUploading, setIsUploading] = useState(false);
+
+    const handleLogout = async () => {
+        try {
+            await logout();
+            router.replace('/(auth)/login');
+        } catch (error) {
+            console.error('Error during logout:', error);
+            Alert.alert('Logout Error', 'Failed to log out cleanly.');
+        }
+    };
+
+    const handleEditAvatar = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+        if (status !== 'granted') {
+            Alert.alert('Permission Denied', 'We need camera roll permissions to upload your profile picture.');
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.5,
+            base64: true,
+        });
+
+        if (!result.canceled && result.assets[0].base64) {
+            setIsUploading(true);
+            try {
+                const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+                await updateUser({ avatar: base64Image });
+                Alert.alert('Success', 'Profile picture updated successfully!');
+            } catch (e: any) {
+                Alert.alert('Error', e.message || 'Failed to upload image');
+            } finally {
+                setIsUploading(false);
+            }
+        }
+    };
 
     const OptionItem = ({ icon, title, value, onPress, color }: { icon: any; title: string; value?: string; onPress?: () => void; color?: string }) => (
         <TouchableOpacity style={[styles.optionItem, { borderBottomColor: theme.border }]} onPress={onPress}>
@@ -32,14 +76,27 @@ export default function ProfileScreen() {
                 <View style={styles.profileInfo}>
                     <View style={styles.avatarContainer}>
                         <View style={[styles.avatar, { backgroundColor: theme.surface }]}>
-                            <Ionicons name="person" size={48} color={theme.primary} />
+                            {user?.avatar ? (
+                                <Image
+                                    key={user.avatar.substring(0, 100)} // Key helps force re-render if URI is complex
+                                    source={{ uri: user.avatar }}
+                                    style={styles.avatarImage}
+                                />
+                            ) : (
+                                <Ionicons name="person" size={48} color={theme.primary} />
+                            )}
+                            {isUploading && (
+                                <View style={styles.loadingOverlay}>
+                                    <ActivityIndicator size="small" color={theme.primary} />
+                                </View>
+                            )}
                         </View>
-                        <TouchableOpacity style={styles.editAvatarBtn}>
+                        <TouchableOpacity style={styles.editAvatarBtn} onPress={handleEditAvatar} disabled={isUploading}>
                             <Ionicons name="camera" size={16} color="#FFF" />
                         </TouchableOpacity>
                     </View>
-                    <Text style={styles.userName}>{name}</Text>
-                    <Text style={styles.userRole}>Level 3 Donor • 5 Lives Saved</Text>
+                    <Text style={styles.userName}>{user?.name || 'Guest User'}</Text>
+                    <Text style={styles.userRole}>{user?.role === 'donor' ? 'Donor' : 'Hospital'} • Verified</Text>
                 </View>
             </View>
 
@@ -61,10 +118,10 @@ export default function ProfileScreen() {
 
                 <Text style={[styles.sectionTitle, { color: theme.text }]}>Personal Information</Text>
                 <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                    <OptionItem icon="person-outline" title="Full Name" value={name} />
-                    <OptionItem icon="call-outline" title="Phone Number" value={phone} />
-                    <OptionItem icon="water-outline" title="Blood Group" value={bloodGroup} />
-                    <OptionItem icon="location-outline" title="Address" value="New Delhi, India" />
+                    <OptionItem icon="person-outline" title="Full Name" value={user?.name} />
+                    <OptionItem icon="call-outline" title="Phone Number" value={user?.phone || 'Not set'} />
+                    <OptionItem icon="water-outline" title="Blood Group" value={user?.bloodGroup} />
+                    <OptionItem icon="location-outline" title="Address" value={user?.location || 'Not set'} />
                 </View>
 
                 <Text style={[styles.sectionTitle, { color: theme.text }]}>Account Settings</Text>
@@ -76,10 +133,19 @@ export default function ProfileScreen() {
 
                 <TouchableOpacity
                     style={[styles.logoutBtn, { borderColor: theme.error }]}
-                    onPress={() => Alert.alert('Logout', 'Are you sure you want to sign out?', [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: 'Logout', style: 'destructive' }
-                    ])}
+                    onPress={() => {
+                        console.log('Sign Out button clicked');
+                        if (Platform.OS === 'web') {
+                            if (window.confirm('Are you sure you want to sign out?')) {
+                                handleLogout();
+                            }
+                        } else {
+                            Alert.alert('Logout', 'Are you sure you want to sign out?', [
+                                { text: 'Cancel', style: 'cancel' },
+                                { text: 'Logout', style: 'destructive', onPress: handleLogout }
+                            ]);
+                        }
+                    }}
                 >
                     <Ionicons name="log-out-outline" size={20} color={theme.error} />
                     <Text style={[styles.logoutText, { color: theme.error }]}>Sign Out</Text>
@@ -119,6 +185,18 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 5,
+        overflow: 'hidden',
+    },
+    avatarImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 50,
+    },
+    loadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(255,255,255,0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     editAvatarBtn: {
         position: 'absolute',
