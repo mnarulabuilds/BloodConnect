@@ -44,7 +44,9 @@ export const donorService = {
 
 // Request Services
 export const requestService = {
-    getRequests: () => api.get('/requests'),
+    getRequests: () => api.get('/requests?limit=3'),
+    getRequestsPaginated: (params: { page?: number; limit?: number; bloodGroup?: string; urgency?: string; status?: string }) =>
+        api.get('/requests', { params }),
     createRequest: (requestData: any) => api.post('/requests', requestData),
     updateRequest: (id: string, requestData: any) => api.put(`/requests/${id}`, requestData),
     deleteRequest: (id: string) => api.delete(`/requests/${id}`),

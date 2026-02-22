@@ -41,6 +41,7 @@ function RootLayoutNav() {
         <Stack.Screen name="(auth)/register" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
         <Stack.Screen name="request-blood" options={{ presentation: 'modal', title: 'Create Blood Request', headerShown: true }} />
+        <Stack.Screen name="all-requests" options={{ headerShown: false }} />
         <Stack.Screen name="chat/[id]" options={{ presentation: 'modal', headerShown: false }} />
       </Stack>
       <Toast />

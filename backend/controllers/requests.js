@@ -1,18 +1,35 @@
 const BloodRequest = require('../models/BloodRequest');
 const User = require('../models/User');
 
-// @desc    Get all blood requests
-// @route   GET /api/requests
+// @desc    Get all blood requests (paginated + filtered)
+// @route   GET /api/requests?page=1&limit=10&bloodGroup=A%2B&urgency=Urgent&status=open
 // @access  Public
 exports.getRequests = async (req, res, next) => {
     try {
-        const requests = await BloodRequest.find().sort('-createdAt').populate({
-            path: 'requestor',
-            select: 'name email phone'
-        });
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
+        const skip = (page - 1) * limit;
+
+        // Build optional filter
+        const filter = {};
+        if (req.query.bloodGroup) filter.bloodGroup = req.query.bloodGroup;
+        if (req.query.urgency) filter.urgency = req.query.urgency;
+        if (req.query.status) filter.status = req.query.status;
+
+        const [requests, totalCount] = await Promise.all([
+            BloodRequest.find(filter)
+                .sort('-createdAt')
+                .skip(skip)
+                .limit(limit)
+                .populate({ path: 'requestor', select: 'name phone' }),
+            BloodRequest.countDocuments(filter)
+        ]);
 
         res.status(200).json({
             success: true,
+            totalCount,
+            totalPages: Math.ceil(totalCount / limit),
+            currentPage: page,
             count: requests.length,
             data: requests
         });
