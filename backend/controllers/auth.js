@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -117,7 +118,6 @@ exports.forgotPassword = async (req, res, next) => {
 // @route   PUT /api/auth/resetpassword/:resettoken
 // @access  Public
 exports.resetPassword = async (req, res, next) => {
-    const crypto = require('crypto');
     // Get hashed token
     const resetPasswordToken = crypto
         .createHash('sha256')

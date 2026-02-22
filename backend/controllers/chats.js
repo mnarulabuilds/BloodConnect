@@ -33,6 +33,16 @@ exports.getChats = async (req, res) => {
 // @access  Private
 exports.getMessages = async (req, res) => {
     try {
+        // Security: verify caller is a participant of this chat
+        const chat = await Chat.findById(req.params.id);
+        if (!chat) {
+            return res.status(404).json({ success: false, error: 'Chat not found' });
+        }
+        const isParticipant = chat.participants.some(p => p.toString() === req.user.id);
+        if (!isParticipant) {
+            return res.status(403).json({ success: false, error: 'Not authorized to view this chat' });
+        }
+
         const messages = await Message.find({ chatId: req.params.id })
             .sort('createdAt');
 
@@ -73,6 +83,16 @@ exports.startChat = async (req, res) => {
 // @access  Private
 exports.sendMessage = async (req, res) => {
     try {
+        // Security: verify caller is a participant of this chat
+        const chat = await Chat.findById(req.params.id);
+        if (!chat) {
+            return res.status(404).json({ success: false, error: 'Chat not found' });
+        }
+        const isParticipant = chat.participants.some(p => p.toString() === req.user.id);
+        if (!isParticipant) {
+            return res.status(403).json({ success: false, error: 'Not authorized to send messages in this chat' });
+        }
+
         const message = await Message.create({
             chatId: req.params.id,
             senderId: req.user.id,

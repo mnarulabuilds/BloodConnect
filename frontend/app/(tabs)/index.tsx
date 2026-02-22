@@ -166,7 +166,7 @@ export default function HomeScreen() {
               </Text>
             )}
 
-            <TouchableOpacity style={styles.viewAllBtn}>
+            <TouchableOpacity style={styles.viewAllBtn} onPress={() => router.push('/request-blood')}>
               <Text style={{ color: theme.primary, fontWeight: 'bold' }}>View All Requests</Text>
             </TouchableOpacity>
           </BlurView>

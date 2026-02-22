@@ -4,25 +4,39 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const http = require('http');
 const { Server } = require('socket.io');
+const rateLimit = require('express-rate-limit');
+const Message = require('./models/Message');
+const Chat = require('./models/Chat');
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
+const ALLOWED_ORIGIN = process.env.CORS_ORIGIN || '*';
+
 const io = new Server(server, {
     cors: {
-        origin: '*',
+        origin: ALLOWED_ORIGIN,
         methods: ['GET', 'POST']
     }
 });
 
+// Rate limiter: max 20 auth requests per 15 minutes per IP
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    message: { success: false, error: 'Too many requests from this IP, please try again after 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
 // Middleware
-app.use(cors());
+app.use(cors({ origin: ALLOWED_ORIGIN }));
 app.use(express.json({ limit: '50mb' }));
 
 // Routes
-app.use('/api/auth', require('./routes/auth'));
+app.use('/api/auth', authLimiter, require('./routes/auth'));
 app.use('/api/donors', require('./routes/donors'));
 app.use('/api/requests', require('./routes/requests'));
 app.use('/api/users', require('./routes/users'));
@@ -37,9 +51,25 @@ io.on('connection', (socket) => {
         console.log(`💬 User joined chat: ${chatId}`);
     });
 
-    socket.on('send_message', (data) => {
-        // Broadcast to all users in the chat room
-        io.to(data.chatId).emit('receive_message', data);
+    socket.on('send_message', async (data) => {
+        try {
+            // Persist message to DB so history is never lost
+            const message = await Message.create({
+                chatId: data.chatId,
+                senderId: data.senderId,
+                text: data.text
+            });
+
+            // Update the chat's lastMessage pointer
+            await Chat.findByIdAndUpdate(data.chatId, { lastMessage: message._id });
+
+            // Broadcast the persisted message (with _id & timestamps) to the room
+            io.to(data.chatId).emit('receive_message', message);
+        } catch (err) {
+            console.error('❌ Failed to persist socket message:', err.message);
+            // Still broadcast so the sender doesn't get stuck, but flag the error
+            socket.emit('message_error', { error: 'Message could not be saved.' });
+        }
     });
 
     socket.on('disconnect', () => {

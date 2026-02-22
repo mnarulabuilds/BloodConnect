@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const userSchema = new mongoose.Schema({
     name: {
@@ -78,7 +79,6 @@ const userSchema = new mongoose.Schema({
 
 // Generate and hash password token
 userSchema.methods.getResetPasswordToken = function () {
-    const crypto = require('crypto');
     // Generate token
     const resetToken = crypto.randomBytes(20).toString('hex');
 

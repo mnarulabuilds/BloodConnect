@@ -40,11 +40,12 @@ export default function DonorsScreen() {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<any>(null);
 
+  // Fetch user location once on mount
   useEffect(() => {
-    fetchDonors();
     getUserLocation();
-  }, [selectedGroup]);
+  }, []);
 
+  // Re-fetch donors on screen focus and whenever the blood group filter changes
   useFocusEffect(
     useCallback(() => {
       fetchDonors();

@@ -26,10 +26,19 @@ exports.getRequests = async (req, res, next) => {
 // @access  Private
 exports.createRequest = async (req, res, next) => {
     try {
-        // Add user to req.body
-        req.body.requestor = req.user.id;
+        // Explicitly whitelist allowed fields to prevent mass-assignment
+        const { patientName, bloodGroup, hospital, location, units, urgency, contact } = req.body;
 
-        const request = await BloodRequest.create(req.body);
+        const request = await BloodRequest.create({
+            patientName,
+            bloodGroup,
+            hospital,
+            location,
+            units,
+            urgency,
+            contact,
+            requestor: req.user.id  // Always taken from authenticated token, never from body
+        });
 
         res.status(201).json({
             success: true,
