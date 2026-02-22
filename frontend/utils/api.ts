@@ -39,6 +39,7 @@ export const userService = {
 // Donor Services
 export const donorService = {
     getDonors: (params: any) => api.get('/donors', { params: { role: 'donor', isAvailable: true, ...params } }),
+    getStats: () => api.get('/donors/stats'),
 };
 
 // Request Services

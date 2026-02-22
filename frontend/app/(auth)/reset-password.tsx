@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, useColorScheme, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, useColorScheme, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { Colors, Spacing } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import axios from 'axios';
+import { useToast } from '@/context/ToastContext';
 
 export default function ResetPasswordScreen() {
     const colorScheme = useColorScheme() ?? 'light';
     const theme = Colors[colorScheme];
     const { token } = useLocalSearchParams<{ token: string }>();
+    const { showToast } = useToast();
 
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -42,11 +44,8 @@ export default function ResetPasswordScreen() {
             const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
             await axios.put(`${baseUrl}/auth/resetpassword/${token}`, { password });
 
-            Alert.alert(
-                'Success',
-                'Your password has been reset successfully. Please login with your new password.',
-                [{ text: 'Login', onPress: () => router.replace('/(auth)/login') }]
-            );
+            showToast({ message: 'Password reset successfully!', type: 'success', duration: 5000 });
+            router.replace('/(auth)/login');
         } catch (e: any) {
             setGeneralError(e.response?.data?.error || 'Failed to reset password. Link may have expired.');
         } finally {

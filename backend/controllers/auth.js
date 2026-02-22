@@ -163,7 +163,12 @@ const sendTokenResponse = (user, statusCode, res) => {
             phone: user.phone,
             location: user.location,
             avatar: user.avatar,
-            isAvailable: user.isAvailable
+            isAvailable: user.isAvailable,
+            lastDonationDate: user.lastDonationDate,
+            nextEligibleDate: user.nextEligibleDate,
+            isMedicalHistoryClear: user.isMedicalHistoryClear,
+            latitude: user.coordinates?.coordinates?.[1] || null,
+            longitude: user.coordinates?.coordinates?.[0] || null
         }
     });
 };

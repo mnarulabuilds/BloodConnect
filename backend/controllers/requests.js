@@ -1,4 +1,5 @@
 const BloodRequest = require('../models/BloodRequest');
+const User = require('../models/User');
 
 // @desc    Get all blood requests
 // @route   GET /api/requests
@@ -53,6 +54,19 @@ exports.updateRequest = async (req, res, next) => {
         // Make sure user is request owner or admin
         if (request.requestor.toString() !== req.user.id && req.user.role !== 'admin') {
             return res.status(401).json({ success: false, error: 'Not authorized to update this request' });
+        }
+
+        // Handle Eligibility Tracking if status is completed
+        if (req.body.status === 'completed' && req.body.donor) {
+            const coolDownDays = 90;
+            const nextEligible = new Date();
+            nextEligible.setDate(nextEligible.getDate() + coolDownDays);
+
+            await User.findByIdAndUpdate(req.body.donor, {
+                lastDonationDate: new Date(),
+                nextEligibleDate: nextEligible,
+                isAvailable: false // Automatically mark as busy
+            });
         }
 
         request = await BloodRequest.findByIdAndUpdate(req.params.id, req.body, {

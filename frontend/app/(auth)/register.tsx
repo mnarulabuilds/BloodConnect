@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, useColorScheme, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, useColorScheme, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { Colors, Spacing } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import Location from '@/utils/Location';
 
 const InputField = ({ label, icon, placeholder, value, onChange, secureTextEntry = false, error }: any) => {
@@ -32,6 +33,7 @@ export default function RegisterScreen() {
     const colorScheme = useColorScheme() ?? 'light';
     const theme = Colors[colorScheme];
     const { register } = useAuth();
+    const { showToast } = useToast();
 
     const [role, setRole] = useState<'Donor' | 'Recipient'>('Donor');
     const [isLoading, setIsLoading] = useState(false);
@@ -54,9 +56,9 @@ export default function RegisterScreen() {
             let { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
                 if (Platform.OS === 'web') {
-                    Alert.alert('Info', 'Location detection is optimized for our mobile app. Please enter your location manually.');
+                    showToast({ message: 'Location works best on mobile. Enter manually.', type: 'info' });
                 } else {
-                    Alert.alert('Permission Denied', 'Permission to access location was denied');
+                    showToast({ message: 'Location permission denied.', type: 'error' });
                 }
                 return;
             }
@@ -80,7 +82,7 @@ export default function RegisterScreen() {
             });
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'Could not fetch your location. Please enter it manually.');
+            showToast({ message: 'Could not fetch location. Enter manually.', type: 'error' });
         } finally {
             setIsLoading(false);
         }

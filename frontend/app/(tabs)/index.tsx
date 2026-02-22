@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image, useColorScheme, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image, useColorScheme, ActivityIndicator } from 'react-native';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Link, useFocusEffect, router } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
-import { requestService, chatService } from '@/utils/api';
+import { useToast } from '@/context/ToastContext';
+import { requestService, chatService, donorService } from '@/utils/api';
 
 interface BloodRequest {
   _id: string;
@@ -23,16 +24,25 @@ export default function HomeScreen() {
   const colorScheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const theme = Colors[colorScheme];
   const { user } = useAuth();
+  const { showToast } = useToast();
 
   const [requests, setRequests] = useState<BloodRequest[]>([]);
+  const [donorCount, setDonorCount] = useState(0);
+  const [savedCount, setSavedCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchRequests = async () => {
     try {
-      const response = await requestService.getRequests();
-      setRequests(response.data.data.slice(0, 3)); // Only show top 3 on home
+      const [requestsRes, statsRes] = await Promise.all([
+        requestService.getRequests(),
+        donorService.getStats()
+      ]);
+      setRequests(requestsRes.data.data.slice(0, 3));
+      setDonorCount(statsRes.data.totalDonors);
+      setSavedCount(statsRes.data.totalSaved);
     } catch (error) {
-      console.error('Error fetching requests:', error);
+      console.error('Error fetching data:', error);
+      showToast({ message: 'Failed to load data', type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -68,9 +78,11 @@ export default function HomeScreen() {
       });
     } catch (error) {
       console.error('Error starting chat:', error);
-      Alert.alert('Error', 'Could not open chat. Please try again.');
+      showToast({ message: 'Could not open chat. Please try again.', type: 'error' });
     }
   };
+
+  const urgentCount = requests.filter(r => r.urgency === 'Critical' || r.urgency === 'Urgent').length;
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -78,7 +90,7 @@ export default function HomeScreen() {
       <View style={[styles.header, { backgroundColor: theme.primary }]}>
         <View style={styles.headerTop}>
           <View>
-            <Text style={styles.greeting}>Hello, {user?.name.split(' ')[0] || 'Donor'}!</Text>
+            <Text style={styles.greeting}>Hello, {user?.name?.split(' ')[0] || 'Friend'}!</Text>
             <Text style={styles.subGreeting}>Your blood can save lives today.</Text>
           </View>
           <TouchableOpacity style={styles.notificationBtn}>
@@ -88,29 +100,28 @@ export default function HomeScreen() {
 
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>1,250</Text>
+            <Text style={styles.statValue}>{donorCount.toLocaleString()}</Text>
             <Text style={styles.statLabel}>Donors</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>430</Text>
-            <Text style={styles.statLabel}>Saved</Text>
+            <Text style={styles.statValue}>{urgentCount}</Text>
+            <Text style={styles.statLabel}>Urgent</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{requests.length > 0 ? requests.filter(r => r.urgency !== 'Normal').length : 12}</Text>
-            <Text style={styles.statLabel}>Urgent</Text>
+            <Text style={styles.statValue}>{savedCount}</Text>
+            <Text style={styles.statLabel}>Saved</Text>
           </View>
         </View>
       </View>
 
       <View style={styles.content}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>Quick Actions</Text>
         <View style={styles.actionsGrid}>
           <QuickAction title="Find Donors" icon="search" color="#4CAF50" href="/donors" />
           <QuickAction title="Request Blood" icon="medkit" color="#FF9800" href="/request-blood" />
-          <QuickAction title="Profile" icon="add-circle" color="#2196F3" href="/profile" />
-          <QuickAction title="Hospitals" icon="business" color="#9C27B0" href="/" />
+          <QuickAction title="Profile" icon="person" color="#2196F3" href="/profile" />
+          <QuickAction title="Chats" icon="chatbubbles" color="#9C27B0" href="/chats" />
         </View>
 
         <View style={styles.emergencyCard}>

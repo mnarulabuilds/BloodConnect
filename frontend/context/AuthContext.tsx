@@ -12,6 +12,11 @@ interface User {
     location?: string;
     avatar?: string;
     isAvailable?: boolean;
+    lastDonationDate?: string;
+    nextEligibleDate?: string;
+    isMedicalHistoryClear?: boolean;
+    latitude?: number;
+    longitude?: number;
 }
 
 interface AuthContextType {

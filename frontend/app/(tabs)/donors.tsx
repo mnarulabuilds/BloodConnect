@@ -1,11 +1,12 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, TextInput, useColorScheme, Animated, ActivityIndicator, Alert, Linking } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, TextInput, useColorScheme, Animated, ActivityIndicator, Linking } from 'react-native';
 import { useFocusEffect, router } from 'expo-router';
 import { Colors, Spacing } from '@/constants/theme';
 import { BLOOD_GROUPS } from '@/constants/data';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import { donorService, chatService } from '@/utils/api';
 import { Platform } from 'react-native';
 import Location from '@/utils/Location';
@@ -31,6 +32,7 @@ export default function DonorsScreen() {
   const theme = Colors[colorScheme];
 
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [donors, setDonors] = useState<Donor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isMapMode, setIsMapMode] = useState(false);
@@ -70,7 +72,7 @@ export default function DonorsScreen() {
       setDonors(response.data.data);
     } catch (error) {
       console.error('Error fetching donors', error);
-      Alert.alert('Error', 'Failed to load donors');
+      showToast({ message: 'Failed to load donors', type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -97,11 +99,11 @@ export default function DonorsScreen() {
 
   const handleCall = (phone: string) => {
     if (!phone) {
-      Alert.alert('Error', 'Phone number not available for this donor.');
+      showToast({ message: 'Phone number not available.', type: 'error' });
       return;
     }
     Linking.openURL(`tel:${phone}`).catch(err => {
-      Alert.alert('Error', 'Failed to open dialer. Please call manually.');
+      showToast({ message: 'Failed to open dialer.', type: 'error' });
       console.error('Linking error:', err);
     });
   };
@@ -116,7 +118,7 @@ export default function DonorsScreen() {
       });
     } catch (error) {
       console.error('Error starting chat:', error);
-      Alert.alert('Error', 'Could not open chat. Please try again.');
+      showToast({ message: 'Could not open chat.', type: 'error' });
     }
   };
 

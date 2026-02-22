@@ -11,7 +11,12 @@ exports.updateProfile = async (req, res, next) => {
             phone: req.body.phone,
             location: req.body.location,
             avatar: req.body.avatar,
-            isAvailable: req.body.isAvailable
+            isAvailable: req.body.isAvailable,
+            lastDonationDate: req.body.lastDonationDate,
+            nextEligibleDate: req.body.nextEligibleDate,
+            isMedicalHistoryClear: req.body.isMedicalHistoryClear,
+            role: req.body.role,
+            bloodGroup: req.body.bloodGroup
         };
 
         if (req.body.latitude && req.body.longitude) {
@@ -42,7 +47,12 @@ exports.updateProfile = async (req, res, next) => {
                 phone: user.phone,
                 location: user.location,
                 avatar: user.avatar,
-                isAvailable: user.isAvailable
+                isAvailable: user.isAvailable,
+                lastDonationDate: user.lastDonationDate,
+                nextEligibleDate: user.nextEligibleDate,
+                isMedicalHistoryClear: user.isMedicalHistoryClear,
+                latitude: user.coordinates?.coordinates?.[1] || null,
+                longitude: user.coordinates?.coordinates?.[0] || null
             }
         });
     } catch (err) {

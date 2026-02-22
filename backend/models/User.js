@@ -59,6 +59,17 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    lastDonationDate: {
+        type: Date
+    },
+    nextEligibleDate: {
+        type: Date,
+        default: Date.now
+    },
+    isMedicalHistoryClear: {
+        type: Boolean,
+        default: true
+    },
     createdAt: {
         type: Date,
         default: Date.now

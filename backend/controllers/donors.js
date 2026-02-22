@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const BloodRequest = require('../models/BloodRequest');
 
 // @desc    Get all donors
 // @route   GET /api/donors
@@ -49,6 +50,8 @@ exports.getDonors = async (req, res, next) => {
 
         filter.role = 'donor';
         filter.isAvailable = true;
+        filter.nextEligibleDate = { $lte: new Date() };
+        filter.isMedicalHistoryClear = true;
 
         query = User.find(filter);
 
@@ -91,6 +94,37 @@ exports.getDonor = async (req, res, next) => {
         }
 
         res.status(200).json({ success: true, data: donor });
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+};
+// @desc    Get donor stats
+// @route   GET /api/donors/stats
+// @access  Public
+exports.getDonorStats = async (req, res, next) => {
+    try {
+        const eligibilityFilter = {
+            role: 'donor',
+            isAvailable: true,
+            nextEligibleDate: { $lte: new Date() },
+            isMedicalHistoryClear: true
+        };
+
+        const donorCount = await User.countDocuments(eligibilityFilter);
+        const savedCount = await BloodRequest.countDocuments({ status: 'completed' });
+        const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+        const groupStats = await Promise.all(bloodGroups.map(async (group) => {
+            const count = await User.countDocuments({ ...eligibilityFilter, bloodGroup: group });
+            return { group, count };
+        }));
+
+        res.status(200).json({
+            success: true,
+            totalDonors: donorCount,
+            totalSaved: savedCount,
+            groupStats
+        });
     } catch (err) {
         res.status(400).json({ success: false, error: err.message });
     }

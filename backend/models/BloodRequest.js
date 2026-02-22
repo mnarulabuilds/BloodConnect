@@ -41,6 +41,10 @@ const bloodRequestSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    donor: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'User'
+    },
     createdAt: {
         type: Date,
         default: Date.now
