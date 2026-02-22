@@ -83,7 +83,7 @@ export default function AllRequestsScreen() {
     const [searchText, setSearchText] = useState('');
     const [helpingId, setHelpingId] = useState<string | null>(null);
 
-    const fetchRequests = useCallback(async (pg = page, refresh = false) => {
+    const fetchRequests = useCallback(async (pg: number, refresh = false) => {
         if (refresh) setIsRefreshing(true);
         else setIsLoading(true);
 
@@ -104,9 +104,9 @@ export default function AllRequestsScreen() {
             setIsLoading(false);
             setIsRefreshing(false);
         }
-    }, [page, pageSize, urgencyFilter, statusFilter, bloodGroupFilter]);
+    }, [pageSize, urgencyFilter, statusFilter, bloodGroupFilter, showToast]);
 
-    useFocusEffect(useCallback(() => { fetchRequests(1); }, [urgencyFilter, statusFilter, bloodGroupFilter, pageSize]));
+    useFocusEffect(useCallback(() => { fetchRequests(1); }, [fetchRequests]));
 
     const handleHelp = async (req: BloodRequest) => {
         const requestorId = typeof req.requestor === 'string' ? req.requestor : req.requestor?._id;
@@ -361,7 +361,7 @@ export default function AllRequestsScreen() {
                                 backgroundColor: pageSize === n ? theme.primary : theme.background,
                                 borderColor: pageSize === n ? theme.primary : theme.border
                             }]}
-                            onPress={() => { setPageSize(n); fetchRequests(1); }}
+                            onPress={() => setPageSize(n)}
                         >
                             <Text style={[styles.pageSizeText, { color: pageSize === n ? '#FFF' : theme.text }]}>{n}</Text>
                         </TouchableOpacity>

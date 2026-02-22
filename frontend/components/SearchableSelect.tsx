@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
     Modal, View, Text, TextInput, FlatList, TouchableOpacity,
     StyleSheet, useColorScheme, Platform, Keyboard, Animated,

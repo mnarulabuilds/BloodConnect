@@ -79,7 +79,7 @@ exports.updateRequest = async (req, res, next) => {
 
         // Make sure user is request owner or admin
         if (request.requestor.toString() !== req.user.id && req.user.role !== 'admin') {
-            return res.status(401).json({ success: false, error: 'Not authorized to update this request' });
+            return res.status(403).json({ success: false, error: 'Not authorized to update this request' });
         }
 
         // Handle Eligibility Tracking if status is completed
@@ -95,7 +95,19 @@ exports.updateRequest = async (req, res, next) => {
             });
         }
 
-        request = await BloodRequest.findByIdAndUpdate(req.params.id, req.body, {
+        // Whitelist only safe fields to prevent mass-assignment
+        const { status, units, urgency, hospital, location, contact, patientName, donor } = req.body;
+        const updateData = {};
+        if (status !== undefined) updateData.status = status;
+        if (units !== undefined) updateData.units = units;
+        if (urgency !== undefined) updateData.urgency = urgency;
+        if (hospital !== undefined) updateData.hospital = hospital;
+        if (location !== undefined) updateData.location = location;
+        if (contact !== undefined) updateData.contact = contact;
+        if (patientName !== undefined) updateData.patientName = patientName;
+        if (donor !== undefined) updateData.donor = donor;
+
+        request = await BloodRequest.findByIdAndUpdate(req.params.id, updateData, {
             new: true,
             runValidators: true
         });
@@ -119,7 +131,7 @@ exports.deleteRequest = async (req, res, next) => {
 
         // Make sure user is request owner or admin
         if (request.requestor.toString() !== req.user.id && req.user.role !== 'admin') {
-            return res.status(401).json({ success: false, error: 'Not authorized to delete this request' });
+            return res.status(403).json({ success: false, error: 'Not authorized to delete this request' });
         }
 
         await request.deleteOne();

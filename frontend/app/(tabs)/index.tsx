@@ -31,7 +31,7 @@ export default function HomeScreen() {
   const [savedCount, setSavedCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     try {
       const [requestsRes, statsRes] = await Promise.all([
         requestService.getRequests(),
@@ -46,16 +46,13 @@ export default function HomeScreen() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [showToast]);
 
-  useEffect(() => {
-    fetchRequests();
-  }, []);
-
+  // useFocusEffect already fires on initial mount — no need for a separate useEffect
   useFocusEffect(
     useCallback(() => {
       fetchRequests();
-    }, [])
+    }, [fetchRequests])
   );
 
   const QuickAction = ({ title, icon, color, href }: { title: string; icon: any; color: string; href: string }) => (

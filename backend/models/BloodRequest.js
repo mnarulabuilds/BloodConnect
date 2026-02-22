@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const bloodRequestSchema = new mongoose.Schema({
     patientName: {
         type: String,
-        required: [true, 'Please add a patient name']
     },
     bloodGroup: {
         type: String,
