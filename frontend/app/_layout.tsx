@@ -6,6 +6,9 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { ToastProvider } from '@/context/ToastContext';
+import { ChatProvider } from '@/context/ChatContext';
+import Toast from '@/components/Toast';
 
 export const unstable_settings = {
   initialRouteName: '(auth)/login',
@@ -38,7 +41,9 @@ function RootLayoutNav() {
         <Stack.Screen name="(auth)/register" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
         <Stack.Screen name="request-blood" options={{ presentation: 'modal', title: 'Create Blood Request', headerShown: true }} />
+        <Stack.Screen name="chat/[id]" options={{ presentation: 'modal', headerShown: false }} />
       </Stack>
+      <Toast />
       <StatusBar style="auto" />
     </ThemeProvider>
   );
@@ -46,8 +51,12 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <RootLayoutNav />
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <ChatProvider>
+          <RootLayoutNav />
+        </ChatProvider>
+      </AuthProvider>
+    </ToastProvider>
   );
 }

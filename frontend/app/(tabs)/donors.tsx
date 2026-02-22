@@ -1,12 +1,12 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { StyleSheet, View, Text, FlatList, TouchableOpacity, TextInput, useColorScheme, Animated, ActivityIndicator, Alert, Linking } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, router } from 'expo-router';
 import { Colors, Spacing } from '@/constants/theme';
 import { BLOOD_GROUPS } from '@/constants/data';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
-import axios from 'axios';
+import { donorService, chatService } from '@/utils/api';
 import { Platform } from 'react-native';
 import Location from '@/utils/Location';
 import MapView, { Marker, Callout } from '@/utils/Maps';
@@ -19,6 +19,7 @@ interface Donor {
   location: string;
   phone: string;
   isAvailable: boolean;
+  role: string;
   avatar?: string;
   coordinates?: {
     coordinates: [number, number];
@@ -62,14 +63,10 @@ export default function DonorsScreen() {
 
   const fetchDonors = async () => {
     setIsLoading(true);
-    const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
     try {
-      let url = `${baseUrl}/donors?role=donor&isAvailable=true`;
-      if (selectedGroup) {
-        url += `&bloodGroup=${encodeURIComponent(selectedGroup)}`;
-      }
-
-      const response = await axios.get(url);
+      const response = await donorService.getDonors({
+        bloodGroup: selectedGroup || undefined
+      });
       setDonors(response.data.data);
     } catch (error) {
       console.error('Error fetching donors', error);
@@ -109,14 +106,31 @@ export default function DonorsScreen() {
     });
   };
 
-  const DonorCard = ({ item }: { item: Donor }) => (
+  const handleContact = async (recipientId: string) => {
+    try {
+      const response = await chatService.startChat(recipientId);
+      const chatId = response.data.data._id;
+      router.push({
+        pathname: '/chat/[id]',
+        params: { id: chatId }
+      });
+    } catch (error) {
+      console.error('Error starting chat:', error);
+      Alert.alert('Error', 'Could not open chat. Please try again.');
+    }
+  };
+
+  const renderDonor = ({ item }: { item: Donor }) => (
     <View style={[styles.donorCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <View style={styles.donorHeader}>
-        <View style={[styles.bloodBadge, { backgroundColor: theme.primary }]}>
+        <View style={[styles.bloodBadge, { backgroundColor: theme.primary + '15' }]}>
+          <Ionicons name="water" size={16} color={theme.primary} />
           <Text style={styles.bloodText}>{item.bloodGroup}</Text>
         </View>
         <View style={styles.donorMainInfo}>
-          <Text style={[styles.donorName, { color: theme.text }]}>{item.name}</Text>
+          <Text style={[styles.donorName, { color: theme.text }]}>
+            {item.role === 'donor' && item._id !== user?.id ? `Donor (${item.bloodGroup})` : item.name}
+          </Text>
           <View style={styles.locationRow}>
             <Ionicons name="location" size={14} color={theme.textSecondary} />
             <Text style={[styles.donorLoc, { color: theme.textSecondary }]}>{item.location}</Text>
@@ -132,16 +146,16 @@ export default function DonorsScreen() {
 
       <View style={styles.donorFooter}>
         <View style={styles.footerDetail}>
-          <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Phone</Text>
-          <Text style={[styles.detailValue, { color: theme.text }]}>{item.phone}</Text>
+          <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Distance</Text>
+          <Text style={[styles.detailValue, { color: theme.text }]}>Nearby</Text>
         </View>
         <TouchableOpacity
           style={[styles.contactButton, { backgroundColor: item.isAvailable ? theme.primary : theme.textSecondary }]}
           disabled={!item.isAvailable}
-          onPress={() => handleCall(item.phone)}
+          onPress={() => handleContact(item._id)}
         >
-          <Ionicons name="call" size={18} color="#FFF" />
-          <Text style={styles.contactButtonText}>Contact</Text>
+          <Ionicons name="chatbubble" size={18} color="#FFF" />
+          <Text style={styles.contactButtonText}>Message</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -272,7 +286,7 @@ export default function DonorsScreen() {
         <FlatList
           data={filteredDonors}
           keyExtractor={item => item._id}
-          renderItem={({ item }) => <DonorCard item={item} />}
+          renderItem={renderDonor}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>

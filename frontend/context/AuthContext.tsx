@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { storage } from '../utils/storage';
-import axios from 'axios';
+import { authService, userService } from '../utils/api';
 
 interface User {
     id: string;
@@ -43,7 +43,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (storedToken && storedUser) {
                 setToken(storedToken);
                 setUser(JSON.parse(storedUser));
-                axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
             }
         } catch (e) {
             console.error('Failed to load auth data', e);
@@ -53,9 +52,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const login = async (email: string, password: string) => {
-        const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
         try {
-            const response = await axios.post(`${baseUrl}/auth/login`, { email, password });
+            const response = await authService.login({ email, password });
             const { token, user } = response.data;
 
             await storage.setItem('userToken', token);
@@ -63,22 +61,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             setToken(token);
             setUser(user);
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         } catch (e: any) {
             throw new Error(e.response?.data?.error || 'Login failed');
         }
     };
 
     const register = async (userData: any) => {
-        const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
-        let response;
         try {
-            response = await axios.post(`${baseUrl}/auth/register`, userData);
-        } catch (e: any) {
-            throw new Error(e.response?.data?.error || 'Registration failed');
-        }
-
-        try {
+            const response = await authService.register(userData);
             const { token, user } = response.data;
 
             if (!token || !user) {
@@ -90,16 +80,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             setToken(token);
             setUser(user);
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         } catch (e: any) {
-            throw new Error(e.message || 'Failed to save login session');
+            throw new Error(e.response?.data?.error || e.message || 'Registration failed');
         }
     };
 
     const updateUser = async (userData: Partial<User>) => {
-        const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
         try {
-            const response = await axios.put(`${baseUrl}/users/profile`, userData);
+            const response = await userService.updateProfile(userData);
             const updatedUser = response.data.data;
 
             await storage.setItem('user', JSON.stringify(updatedUser));
@@ -115,7 +103,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await storage.removeItem('user');
             setToken(null);
             setUser(null);
-            delete axios.defaults.headers.common['Authorization'];
         } catch (e) {
             console.error('Logout failed', e);
         }

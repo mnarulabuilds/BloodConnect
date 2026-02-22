@@ -1,17 +1,52 @@
-
-import React from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image, useColorScheme } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image, useColorScheme, ActivityIndicator, Alert } from 'react-native';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { Link } from 'expo-router';
+import { Link, useFocusEffect, router } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
+import { requestService, chatService } from '@/utils/api';
+
+interface BloodRequest {
+  _id: string;
+  patientName: string;
+  bloodGroup: string;
+  hospital: string;
+  location: string;
+  urgency: string;
+  units: number;
+  requestor: any;
+}
 
 export default function HomeScreen() {
   const colorScheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const theme = Colors[colorScheme];
   const { user } = useAuth();
+
+  const [requests, setRequests] = useState<BloodRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchRequests = async () => {
+    try {
+      const response = await requestService.getRequests();
+      setRequests(response.data.data.slice(0, 3)); // Only show top 3 on home
+    } catch (error) {
+      console.error('Error fetching requests:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchRequests();
+    }, [])
+  );
 
   const QuickAction = ({ title, icon, color, href }: { title: string; icon: any; color: string; href: string }) => (
     <Link href={href as any} asChild>
@@ -23,6 +58,19 @@ export default function HomeScreen() {
       </TouchableOpacity>
     </Link>
   );
+
+  const handleHelp = async (recipientId: string, requestId: string) => {
+    try {
+      const response = await chatService.startChat(recipientId, requestId);
+      router.push({
+        pathname: '/chat/[id]',
+        params: { id: response.data.data._id }
+      });
+    } catch (error) {
+      console.error('Error starting chat:', error);
+      Alert.alert('Error', 'Could not open chat. Please try again.');
+    }
+  };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -50,7 +98,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>12</Text>
+            <Text style={styles.statValue}>{requests.length > 0 ? requests.filter(r => r.urgency !== 'Normal').length : 12}</Text>
             <Text style={styles.statLabel}>Urgent</Text>
           </View>
         </View>
@@ -61,7 +109,7 @@ export default function HomeScreen() {
         <View style={styles.actionsGrid}>
           <QuickAction title="Find Donors" icon="search" color="#4CAF50" href="/donors" />
           <QuickAction title="Request Blood" icon="medkit" color="#FF9800" href="/request-blood" />
-          <QuickAction title="Register" icon="add-circle" color="#2196F3" href="/profile" />
+          <QuickAction title="Profile" icon="add-circle" color="#2196F3" href="/profile" />
           <QuickAction title="Hospitals" icon="business" color="#9C27B0" href="/" />
         </View>
 
@@ -77,18 +125,35 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            <View style={[styles.requestItem, { borderBottomColor: theme.border }]}>
-              <View style={styles.bloodTypeCircle}>
-                <Text style={styles.bloodTypeText}>O-</Text>
-              </View>
-              <View style={styles.requestInfo}>
-                <Text style={[styles.requestUser, { color: theme.text }]}>Maxis Hospital</Text>
-                <Text style={[styles.requestLoc, { color: theme.textSecondary }]}>2.5 km away • Urgent</Text>
-              </View>
-              <TouchableOpacity style={styles.donateBtn}>
-                <Text style={styles.donateBtnText}>Donate</Text>
-              </TouchableOpacity>
-            </View>
+            {isLoading ? (
+              <ActivityIndicator size="small" color={theme.primary} style={{ marginVertical: 20 }} />
+            ) : requests.length > 0 ? (
+              requests.map((request) => (
+                <View key={request._id} style={[styles.requestItem, { borderBottomColor: theme.border }]}>
+                  <View style={styles.bloodTypeCircle}>
+                    <Text style={styles.bloodTypeText}>{request.bloodGroup}</Text>
+                  </View>
+                  <View style={styles.requestInfo}>
+                    <Text style={[styles.requestUser, { color: theme.text }]} numberOfLines={1}>
+                      {request.hospital || request.patientName || 'Anonymous Patient'}
+                    </Text>
+                    <Text style={[styles.requestLoc, { color: theme.textSecondary }]}>
+                      {request.location} • {request.urgency}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.donateBtn}
+                    onPress={() => handleHelp(typeof request.requestor === 'string' ? request.requestor : request.requestor._id, request._id)}
+                  >
+                    <Text style={styles.donateBtnText}>Help</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            ) : (
+              <Text style={{ textAlign: 'center', color: theme.textSecondary, marginVertical: 20 }}>
+                No active requests found.
+              </Text>
+            )}
 
             <TouchableOpacity style={styles.viewAllBtn}>
               <Text style={{ color: theme.primary, fontWeight: 'bold' }}>View All Requests</Text>
