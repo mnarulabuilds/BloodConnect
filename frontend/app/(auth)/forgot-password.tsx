@@ -27,23 +27,9 @@ export default function ForgotPasswordScreen() {
 
         try {
             const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
-            const response = await axios.post(`${baseUrl}/auth/forgotpassword`, { email });
+            await axios.post(`${baseUrl}/auth/forgotpassword`, { email });
 
-            // For demo/setup purposes, since we don't send emails, 
-            // we'll simulate success and potentially redirect to reset screen
-            setSuccessMessage('Password reset link has been generated. Check console for the token!');
-
-            // In a real app, the user would check their email
-            // For this flow, let's navigate them to reset password after 2 seconds
-            if (response.data.token) {
-                console.log('RESET TOKEN:', response.data.token);
-                setTimeout(() => {
-                    router.push({
-                        pathname: '/(auth)/reset-password',
-                        params: { token: response.data.token }
-                    } as any);
-                }, 2000);
-            }
+            setSuccessMessage('If an account with that email exists, a password reset link has been sent.');
         } catch (e: any) {
             setGeneralError(e.response?.data?.error || 'Something went wrong. Please try again.');
         } finally {

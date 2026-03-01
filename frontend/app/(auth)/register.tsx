@@ -74,12 +74,12 @@ export default function RegisterScreen() {
                 address = `${item.city || ''}, ${item.region || ''}, ${item.country || ''}`.replace(/^, /, '');
             }
 
-            setForm({
-                ...form,
+            setForm(prev => ({
+                ...prev,
                 latitude,
                 longitude,
                 location: address || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
-            });
+            }));
         } catch (error) {
             console.error(error);
             showToast({ message: 'Could not fetch location. Enter manually.', type: 'error' });
@@ -117,10 +117,19 @@ export default function RegisterScreen() {
 
         setIsLoading(true);
         try {
-            await register({
-                ...form,
-                role: role.toLowerCase() === 'donor' ? 'donor' : 'hospital'
-            });
+            const payload: Record<string, unknown> = {
+                name: form.name,
+                email: form.email,
+                phone: form.phone,
+                password: form.password,
+                location: form.location,
+                role: role.toLowerCase() === 'donor' ? 'donor' : 'hospital',
+            };
+            if (form.bloodGroup) payload.bloodGroup = form.bloodGroup;
+            if (form.latitude != null) payload.latitude = form.latitude;
+            if (form.longitude != null) payload.longitude = form.longitude;
+
+            await register(payload as any);
             router.replace('/(tabs)');
         } catch (e: any) {
             setGeneralError(e.message);

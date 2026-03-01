@@ -123,7 +123,7 @@ export default function DonorsScreen() {
     }
   };
 
-  const renderDonor = ({ item }: { item: Donor }) => (
+  const renderDonor = useCallback(({ item }: { item: Donor }) => (
     <View style={[styles.donorCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <View style={styles.donorHeader}>
         <View style={[styles.bloodBadge, { backgroundColor: theme.primary + '15' }]}>
@@ -162,7 +162,7 @@ export default function DonorsScreen() {
         </TouchableOpacity>
       </View>
     </View>
-  );
+  ), [theme, user, handleContact]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -178,17 +178,17 @@ export default function DonorsScreen() {
         </View>
 
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color={theme.textSecondary} style={styles.searchIcon} />
+          <Ionicons name="search" size={20} color="#757575" style={styles.searchIcon} />
           <TextInput
-            style={[styles.searchInput, { color: theme.text }]}
+            style={[styles.searchInput, { color: '#212121' }]}
             placeholder="Search by name or location..."
-            placeholderTextColor={theme.textSecondary}
+            placeholderTextColor="#757575"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
+              <Ionicons name="close-circle" size={20} color="#757575" />
             </TouchableOpacity>
           )}
         </View>
@@ -291,6 +291,9 @@ export default function DonorsScreen() {
           keyExtractor={item => item._id}
           renderItem={renderDonor}
           contentContainerStyle={styles.listContent}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={10}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="search-outline" size={80} color={theme.border} />

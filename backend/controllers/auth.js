@@ -1,174 +1,179 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const env = require('../config/env');
+const logger = require('../config/logger');
+const { AppError } = require('../middleware/errorHandler');
 
-// @desc    Register user
-// @route   POST /api/auth/register
-// @access  Public
 exports.register = async (req, res, next) => {
-    try {
-        const { name, email, password, bloodGroup, location, phone, role, latitude, longitude } = req.body;
+  try {
+    const { name, email, password, bloodGroup, location, phone, role, latitude, longitude } = req.body;
 
-        // Basic validation
-        if (!name || !email || !password || !location || !phone) {
-            return res.status(400).json({ success: false, error: 'Please fill in all required fields' });
-        }
+    const userRole = role?.toLowerCase() === 'hospital' ? 'hospital' : 'donor';
 
-        const userRole = role?.toLowerCase() === 'hospital' ? 'hospital' : 'donor';
-
-        // Donors must have a blood group
-        if (userRole === 'donor' && !bloodGroup) {
-            return res.status(400).json({ success: false, error: 'Donors must specify a blood group' });
-        }
-
-        const userExists = await User.findOne({ email });
-        if (userExists) {
-            return res.status(400).json({ success: false, error: 'An account with this email already exists' });
-        }
-
-        // Create user object
-        const userData = {
-            name,
-            email,
-            password,
-            location,
-            phone,
-            role: userRole
-        };
-
-        // Add coordinates if provided
-        if (latitude && longitude) {
-            userData.coordinates = {
-                type: 'Point',
-                coordinates: [parseFloat(longitude), parseFloat(latitude)]
-            };
-        }
-
-        // Only add bloodGroup if it's a donor
-        if (userRole === 'donor') {
-            userData.bloodGroup = bloodGroup;
-        }
-
-        const user = await User.create(userData);
-
-        sendTokenResponse(user, 201, res);
-    } catch (err) {
-        res.status(400).json({ success: false, error: err.message });
+    if (userRole === 'donor' && !bloodGroup) {
+      return res.status(400).json({ success: false, error: 'Donors must specify a blood group' });
     }
+
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ success: false, error: 'An account with this email already exists' });
+    }
+
+    const userData = { name, email, password, location, phone, role: userRole };
+
+    if (latitude && longitude) {
+      userData.coordinates = {
+        type: 'Point',
+        coordinates: [parseFloat(longitude), parseFloat(latitude)],
+      };
+    }
+
+    if (userRole === 'donor') {
+      userData.bloodGroup = bloodGroup;
+    }
+
+    const user = await User.create(userData);
+    sendTokenResponse(user, 201, res);
+  } catch (err) {
+    next(err);
+  }
 };
 
-// @desc    Login user
-// @route   POST /api/auth/login
-// @access  Public
 exports.login = async (req, res, next) => {
-    try {
-        const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-        // Validate email & password
-        if (!email || !password) {
-            return res.status(400).json({ success: false, error: 'Please provide an email and password' });
-        }
-
-        // Check for user
-        const user = await User.findOne({ email }).select('+password');
-
-        if (!user) {
-            return res.status(401).json({ success: false, error: 'Invalid credentials' });
-        }
-
-        // Check if password matches
-        const isMatch = await user.matchPassword(password);
-
-        if (!isMatch) {
-            return res.status(401).json({ success: false, error: 'Invalid credentials' });
-        }
-
-        sendTokenResponse(user, 200, res);
-    } catch (err) {
-        res.status(400).json({ success: false, error: err.message });
+    const user = await User.findOne({ email }).select('+password');
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
+
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
+    }
+
+    sendTokenResponse(user, 200, res);
+  } catch (err) {
+    next(err);
+  }
 };
 
-// Get token from model, create cookie and send response
-// @desc    Forgot password
-// @route   POST /api/auth/forgotpassword
-// @access  Public
 exports.forgotPassword = async (req, res, next) => {
+  try {
     const user = await User.findOne({ email: req.body.email });
 
     if (!user) {
-        return res.status(404).json({ error: 'There is no user with that email' });
+      return res.status(200).json({
+        success: true,
+        data: 'If an account with that email exists, a reset link has been sent',
+      });
     }
 
-    // Get reset token
     const resetToken = user.getResetPasswordToken();
-
     await user.save({ validateBeforeSave: false });
 
-    // In a real app, you would send an email here.
-    // For this demo/setup, we return the token in the response
+    if (env.NODE_ENV !== 'production') {
+      logger.info({ resetToken, email: req.body.email }, 'Password reset token generated (dev only)');
+    }
+
     res.status(200).json({
-        success: true,
-        data: 'Password reset token generated',
-        token: resetToken // Returning token for demo purposes
+      success: true,
+      data: 'If an account with that email exists, a reset link has been sent',
     });
+  } catch (err) {
+    next(err);
+  }
 };
 
-// @desc    Reset password
-// @route   PUT /api/auth/resetpassword/:resettoken
-// @access  Public
 exports.resetPassword = async (req, res, next) => {
-    // Get hashed token
+  try {
     const resetPasswordToken = crypto
-        .createHash('sha256')
-        .update(req.params.resettoken)
-        .digest('hex');
+      .createHash('sha256')
+      .update(req.params.resettoken)
+      .digest('hex');
 
     const user = await User.findOne({
-        resetPasswordToken,
-        resetPasswordExpire: { $gt: Date.now() }
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() },
     });
 
     if (!user) {
-        return res.status(400).json({ error: 'Invalid or expired token' });
+      return res.status(400).json({ success: false, error: 'Invalid or expired token' });
     }
 
-    // Set new password
     user.password = req.body.password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
     await user.save();
 
-    res.status(200).json({
-        success: true,
-        message: 'Password reset successful'
-    });
+    res.status(200).json({ success: true, data: 'Password reset successful' });
+  } catch (err) {
+    next(err);
+  }
 };
 
-const sendTokenResponse = (user, statusCode, res) => {
-    // Create token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-        expiresIn: '30d'
-    });
+exports.refreshToken = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return res.status(400).json({ success: false, error: 'Refresh token is required' });
+    }
 
-    res.status(statusCode).json({
-        success: true,
-        token,
-        user: {
-            id: user._id,
-            name: user.name,
-            email: user.email,
-            bloodGroup: user.bloodGroup,
-            role: user.role,
-            phone: user.phone,
-            location: user.location,
-            avatar: user.avatar,
-            isAvailable: user.isAvailable,
-            lastDonationDate: user.lastDonationDate,
-            nextEligibleDate: user.nextEligibleDate,
-            isMedicalHistoryClear: user.isMedicalHistoryClear,
-            latitude: user.coordinates?.coordinates?.[1] || null,
-            longitude: user.coordinates?.coordinates?.[0] || null
-        }
-    });
+    let decoded;
+    try {
+      decoded = jwt.verify(refreshToken, env.JWT_SECRET);
+    } catch {
+      return res.status(401).json({ success: false, error: 'Invalid or expired refresh token' });
+    }
+
+    const user = await User.findById(decoded.id);
+    if (!user || user.refreshToken !== crypto.createHash('sha256').update(refreshToken).digest('hex')) {
+      return res.status(401).json({ success: false, error: 'Invalid refresh token' });
+    }
+
+    sendTokenResponse(user, 200, res);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.logoutUser = async (req, res, next) => {
+  try {
+    await User.findByIdAndUpdate(req.user.id, { refreshToken: undefined });
+    res.status(200).json({ success: true, data: 'Logged out successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const sendTokenResponse = async (user, statusCode, res) => {
+  const accessToken = jwt.sign({ id: user._id }, env.JWT_SECRET, { expiresIn: env.JWT_ACCESS_EXPIRE });
+  const refreshToken = jwt.sign({ id: user._id, type: 'refresh' }, env.JWT_SECRET, { expiresIn: env.JWT_REFRESH_EXPIRE });
+
+  const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+  await User.findByIdAndUpdate(user._id, { refreshToken: refreshTokenHash });
+
+  res.status(statusCode).json({
+    success: true,
+    accessToken,
+    refreshToken,
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      bloodGroup: user.bloodGroup,
+      role: user.role,
+      phone: user.phone,
+      location: user.location,
+      avatar: user.avatar,
+      isAvailable: user.isAvailable,
+      lastDonationDate: user.lastDonationDate,
+      nextEligibleDate: user.nextEligibleDate,
+      isMedicalHistoryClear: user.isMedicalHistoryClear,
+      latitude: user.coordinates?.coordinates?.[1] || null,
+      longitude: user.coordinates?.coordinates?.[0] || null,
+    },
+  });
 };

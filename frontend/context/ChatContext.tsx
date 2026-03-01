@@ -1,64 +1,81 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 
 const SOCKET_URL = process.env.EXPO_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000';
 
 interface ChatContextType {
-    socket: Socket | null;
-    joinChat: (chatId: string) => void;
-    sendMessage: (chatId: string, text: string) => void;
+  socket: Socket | null;
+  joinChat: (chatId: string) => void;
+  sendMessage: (chatId: string, text: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { token, user } = useAuth();
-    const [socket, setSocket] = useState<Socket | null>(null);
+  const { token, user } = useAuth();
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const activeChatRef = useRef<string | null>(null);
 
-    useEffect(() => {
-        if (token) {
-            const newSocket = io(SOCKET_URL, {
-                auth: { token }
-            });
+  useEffect(() => {
+    if (!token) {
+      if (socket) {
+        socket.disconnect();
+        setSocket(null);
+      }
+      return;
+    }
 
-            setSocket(newSocket);
+    const newSocket = io(SOCKET_URL, {
+      auth: { token },
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+    });
 
-            return () => {
-                newSocket.disconnect();
-            };
-        }
-    }, [token]);
+    newSocket.on('connect', () => {
+      if (activeChatRef.current) {
+        newSocket.emit('join_chat', activeChatRef.current);
+      }
+    });
 
-    const joinChat = useCallback((chatId: string) => {
-        if (socket) {
-            socket.emit('join_chat', chatId);
-        }
-    }, [socket]);
+    setSocket(newSocket);
 
-    const sendMessage = useCallback((chatId: string, text: string) => {
-        if (socket && user) {
-            const messageData = {
-                chatId,
-                senderId: user.id,
-                text,
-                createdAt: new Date()
-            };
-            socket.emit('send_message', messageData);
-        }
-    }, [socket, user]);
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [token]);
 
-    return (
-        <ChatContext.Provider value={{ socket, joinChat, sendMessage }}>
-            {children}
-        </ChatContext.Provider>
-    );
+  const joinChat = useCallback(
+    (chatId: string) => {
+      activeChatRef.current = chatId;
+      if (socket?.connected) {
+        socket.emit('join_chat', chatId);
+      }
+    },
+    [socket]
+  );
+
+  const sendMessage = useCallback(
+    (chatId: string, text: string) => {
+      if (socket?.connected && user) {
+        socket.emit('send_message', { chatId, text, createdAt: new Date() });
+      }
+    },
+    [socket, user]
+  );
+
+  return (
+    <ChatContext.Provider value={{ socket, joinChat, sendMessage }}>
+      {children}
+    </ChatContext.Provider>
+  );
 };
 
 export const useChat = () => {
-    const context = useContext(ChatContext);
-    if (context === undefined) {
-        throw new Error('useChat must be used within a ChatProvider');
-    }
-    return context;
+  const context = useContext(ChatContext);
+  if (context === undefined) {
+    throw new Error('useChat must be used within a ChatProvider');
+  }
+  return context;
 };

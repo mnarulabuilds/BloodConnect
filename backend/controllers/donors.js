@@ -1,131 +1,127 @@
 const User = require('../models/User');
 const BloodRequest = require('../models/BloodRequest');
+const logger = require('../config/logger');
 
-// @desc    Get all donors
-// @route   GET /api/donors
-// @access  Public
+const ALLOWED_SELECT_FIELDS = ['name', 'bloodGroup', 'location', 'phone', 'isAvailable', 'coordinates', 'avatar', 'role', 'createdAt'];
+const ALLOWED_SORT_FIELDS = ['createdAt', 'name', 'bloodGroup', 'location'];
+
 exports.getDonors = async (req, res, next) => {
-    try {
-        let query;
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
 
-        // Copy req.query
-        const reqQuery = { ...req.query };
+    const filter = {
+      role: 'donor',
+      isAvailable: true,
+      nextEligibleDate: { $lte: new Date() },
+      isMedicalHistoryClear: true,
+    };
 
-        // Fields to exclude
-        const removeFields = ['select', 'sort', 'page', 'limit'];
-
-        // Loop over removeFields and delete them from reqQuery
-        removeFields.forEach(param => delete reqQuery[param]);
-
-        // Create query string
-        let queryStr = JSON.stringify(reqQuery);
-
-        // Create operators ($gt, $gte, etc)
-        queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
-
-        // Finding resource
-        const filter = JSON.parse(queryStr);
-
-        // Geospatial filter
-        if (req.query.latitude && req.query.longitude) {
-            const lat = parseFloat(req.query.latitude);
-            const lng = parseFloat(req.query.longitude);
-            const radius = parseFloat(req.query.radius) || 10; // Default 10km
-
-            filter.coordinates = {
-                $near: {
-                    $geometry: {
-                        type: 'Point',
-                        coordinates: [lng, lat]
-                    },
-                    $maxDistance: radius * 1000 // Convert km to meters
-                }
-            };
-
-            // Remove lat/lng/radius from filter so they don't interfere with field matching
-            delete filter.latitude;
-            delete filter.longitude;
-            delete filter.radius;
-        }
-
-        filter.role = 'donor';
-        filter.isAvailable = true;
-        filter.nextEligibleDate = { $lte: new Date() };
-        filter.isMedicalHistoryClear = true;
-
-        query = User.find(filter);
-
-        // Select Fields
-        if (req.query.select) {
-            const fields = req.query.select.split(',').join(' ');
-            query = query.select(fields);
-        }
-
-        // Sort
-        if (req.query.sort) {
-            const sortBy = req.query.sort.split(',').join(' ');
-            query = query.sort(sortBy);
-        } else {
-            query = query.sort('-createdAt');
-        }
-
-        // Executing query
-        const donors = await query;
-
-        res.status(200).json({
-            success: true,
-            count: donors.length,
-            data: donors
-        });
-    } catch (err) {
-        res.status(400).json({ success: false, error: err.message });
+    if (req.query.bloodGroup) {
+      const validGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+      if (validGroups.includes(req.query.bloodGroup)) {
+        filter.bloodGroup = req.query.bloodGroup;
+      }
     }
-};
 
-// @desc    Get single donor
-// @route   GET /api/donors/:id
-// @access  Public
-exports.getDonor = async (req, res, next) => {
-    try {
-        const donor = await User.findById(req.params.id);
+    if (req.query.latitude && req.query.longitude) {
+      const lat = parseFloat(req.query.latitude);
+      const lng = parseFloat(req.query.longitude);
+      const radius = parseFloat(req.query.radius) || 10;
 
-        if (!donor || donor.role !== 'donor') {
-            return res.status(404).json({ success: false, error: 'Donor not found' });
-        }
-
-        res.status(200).json({ success: true, data: donor });
-    } catch (err) {
-        res.status(400).json({ success: false, error: err.message });
-    }
-};
-// @desc    Get donor stats
-// @route   GET /api/donors/stats
-// @access  Public
-exports.getDonorStats = async (req, res, next) => {
-    try {
-        const eligibilityFilter = {
-            role: 'donor',
-            isAvailable: true,
-            nextEligibleDate: { $lte: new Date() },
-            isMedicalHistoryClear: true
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        filter.coordinates = {
+          $near: {
+            $geometry: { type: 'Point', coordinates: [lng, lat] },
+            $maxDistance: radius * 1000,
+          },
         };
-
-        const donorCount = await User.countDocuments(eligibilityFilter);
-        const savedCount = await BloodRequest.countDocuments({ status: 'completed' });
-        const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-
-        const groupStats = await Promise.all(bloodGroups.map(async (group) => {
-            const count = await User.countDocuments({ ...eligibilityFilter, bloodGroup: group });
-            return { group, count };
-        }));
-
-        res.status(200).json({
-            success: true,
-            totalDonors: donorCount,
-            totalSaved: savedCount,
-            groupStats
-        });
-    } catch (err) {
-        res.status(400).json({ success: false, error: err.message });
+      }
     }
+
+    let query = User.find(filter);
+
+    if (req.query.select) {
+      const requestedFields = req.query.select.split(',');
+      const safeFields = requestedFields.filter((f) => ALLOWED_SELECT_FIELDS.includes(f.trim()));
+      if (safeFields.length > 0) {
+        query = query.select(safeFields.join(' '));
+      }
+    }
+
+    if (req.query.sort) {
+      const requestedSorts = req.query.sort.split(',');
+      const safeSorts = requestedSorts.filter((s) => {
+        const field = s.replace(/^-/, '').trim();
+        return ALLOWED_SORT_FIELDS.includes(field);
+      });
+      if (safeSorts.length > 0) {
+        query = query.sort(safeSorts.join(' '));
+      } else {
+        query = query.sort('-createdAt');
+      }
+    } else {
+      query = query.sort('-createdAt');
+    }
+
+    const [donors, totalCount] = await Promise.all([
+      query.skip(skip).limit(limit),
+      User.countDocuments(filter),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: page,
+      count: donors.length,
+      data: donors,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getDonor = async (req, res, next) => {
+  try {
+    const donor = await User.findById(req.params.id);
+
+    if (!donor || donor.role !== 'donor') {
+      return res.status(404).json({ success: false, error: 'Donor not found' });
+    }
+
+    res.status(200).json({ success: true, data: donor });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getDonorStats = async (req, res, next) => {
+  try {
+    const eligibilityFilter = {
+      role: 'donor',
+      isAvailable: true,
+      nextEligibleDate: { $lte: new Date() },
+      isMedicalHistoryClear: true,
+    };
+
+    const [donorCount, savedCount, groupStats] = await Promise.all([
+      User.countDocuments(eligibilityFilter),
+      BloodRequest.countDocuments({ status: 'completed' }),
+      User.aggregate([
+        { $match: eligibilityFilter },
+        { $group: { _id: '$bloodGroup', count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      totalDonors: donorCount,
+      totalSaved: savedCount,
+      groupStats: groupStats.map((g) => ({ group: g._id, count: g.count })),
+    });
+  } catch (err) {
+    next(err);
+  }
 };
