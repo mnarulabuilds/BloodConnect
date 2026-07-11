@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const env = require('../config/env');
 const logger = require('../config/logger');
-const { AppError } = require('../middleware/errorHandler');
+const sendEmail = require('../utils/sendEmail');
 
 exports.register = async (req, res, next) => {
   try {
@@ -62,6 +62,15 @@ exports.login = async (req, res, next) => {
 
 exports.forgotPassword = async (req, res, next) => {
   try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
     const user = await User.findOne({ email: req.body.email });
 
     if (!user) {
@@ -77,6 +86,24 @@ exports.forgotPassword = async (req, res, next) => {
     if (env.NODE_ENV !== 'production') {
       logger.info({ resetToken, email: req.body.email }, 'Password reset token generated (dev only)');
     }
+
+    const resetURL = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
+
+    const message = `
+      Hello,
+
+      You requested to reset your password.
+
+      Click the link below:
+
+      ${resetURL}
+
+      This link will expire in 15 minutes.
+
+      If you didn't request this, simply ignore this email.
+    `;
+
+    await sendEmail(user.email, "Password Reset", message);
 
     res.status(200).json({
       success: true,
