@@ -18,4 +18,7 @@ module.exports = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   JWT_ACCESS_EXPIRE: '15m',
   JWT_REFRESH_EXPIRE: '30d',
+  EMAIL_USER: process.env.EMAIL_USER,
+  EMAIL_PASS: process.env.EMAIL_PASS,
+  CLIENT_URL: process.env.CLIENT_URL,
 };

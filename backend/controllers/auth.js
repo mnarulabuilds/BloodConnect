@@ -87,7 +87,7 @@ exports.forgotPassword = async (req, res, next) => {
       logger.info({ resetToken, email: req.body.email }, 'Password reset token generated (dev only)');
     }
 
-    const resetURL = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
+    const resetURL = `${env.CLIENT_URL}/reset-password?token=${resetToken}`;
 
     const message = `
       Hello,
