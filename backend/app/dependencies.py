@@ -26,6 +26,20 @@ def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(
     return user
 
 
+def get_optional_user(credentials: HTTPAuthorizationCredentials | None = Depends(security)):
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        return None
+    try:
+        payload = decode_token(credentials.credentials)
+    except Exception:
+        return None
+    user = get_db().users.find_one({"_id": ObjectId(payload["id"])})
+    if not user:
+        return None
+    user["id"] = str(user["_id"])
+    return user
+
+
 def http_exception_handler(_request: Request, exc: HTTPException):
     if isinstance(exc.detail, dict):
         return JSONResponse(status_code=exc.status_code, content=exc.detail)

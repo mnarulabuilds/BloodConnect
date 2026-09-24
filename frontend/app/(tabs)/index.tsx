@@ -8,17 +8,8 @@ import { Link, useFocusEffect, router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { requestService, chatService, donorService } from '@/utils/api';
-
-interface BloodRequest {
-  _id: string;
-  patientName: string;
-  bloodGroup: string;
-  hospital: string;
-  location: string;
-  urgency: string;
-  units: number;
-  requestor: any;
-}
+import type { BloodRequest } from '@/types';
+import { getRequestorId } from '@/types';
 
 export default function HomeScreen() {
   const colorScheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
@@ -90,7 +81,7 @@ export default function HomeScreen() {
             <Text style={styles.greeting}>Hello, {user?.name?.split(' ')[0] || 'Friend'}!</Text>
             <Text style={styles.subGreeting}>Your blood can save lives today.</Text>
           </View>
-          <TouchableOpacity style={styles.notificationBtn}>
+          <TouchableOpacity style={styles.notificationBtn} onPress={() => router.push('/all-requests')}>
             <Ionicons name="notifications" size={24} color="#FFF" />
           </TouchableOpacity>
         </View>
@@ -151,7 +142,7 @@ export default function HomeScreen() {
                   </View>
                   <TouchableOpacity
                     style={styles.donateBtn}
-                    onPress={() => handleHelp(typeof request.requestor === 'string' ? request.requestor : request.requestor._id, request._id)}
+                    onPress={() => handleHelp(getRequestorId(request.requestor), request._id)}
                   >
                     <Text style={styles.donateBtnText}>Help</Text>
                   </TouchableOpacity>

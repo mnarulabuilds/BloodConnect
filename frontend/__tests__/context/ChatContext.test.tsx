@@ -36,11 +36,9 @@ describe('ChatContext', () => {
 
     act(() => {
       result.current.joinChat('chat-1');
-      result.current.sendMessage('chat-1', 'Hello');
     });
 
     expect(socket.emit).toHaveBeenCalledWith('join_chat', 'chat-1');
-    expect(socket.emit).toHaveBeenCalledWith('send_message', expect.objectContaining({ chatId: 'chat-1' }));
   });
 
   it('disconnects when token is cleared', async () => {
@@ -65,30 +63,6 @@ describe('ChatContext', () => {
     authState.token = null;
     rerender({});
     await waitFor(() => expect(socket.disconnect).toHaveBeenCalled());
-  });
-
-  it('does not send message when user is missing', async () => {
-    const socket = {
-      on: jest.fn(),
-      emit: jest.fn(),
-      disconnect: jest.fn(),
-      connected: true,
-    };
-    (io as jest.Mock).mockReturnValue(socket);
-    (useAuth as jest.Mock).mockReturnValue({ token: 'token', user: null });
-
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <ChatProvider>{children}</ChatProvider>
-    );
-
-    const { result } = renderHook(() => useChat(), { wrapper });
-    await waitFor(() => expect(result.current.socket).toBeTruthy());
-
-    act(() => {
-      result.current.sendMessage('chat-1', 'Hello');
-    });
-
-    expect(socket.emit).not.toHaveBeenCalledWith('send_message', expect.anything());
   });
 
   it('queues joinChat until socket connects', async () => {

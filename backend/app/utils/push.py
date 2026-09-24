@@ -5,6 +5,7 @@ import httpx
 from bson import ObjectId
 
 from app.db import get_db
+from app.services.donor_eligibility import eligible_donor_filter
 
 logger = logging.getLogger("bloodconnect.push")
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
@@ -51,17 +52,11 @@ def send_push_notifications(push_tokens: list[str], title: str, body: str, data:
 def notify_matching_donors(blood_request: dict, requestor_id: str) -> None:
     db = get_db()
     try:
-        matching = list(
-            db.users.find(
-                {
-                    "role": "donor",
-                    "bloodGroup": blood_request.get("bloodGroup"),
-                    "isAvailable": True,
-                    "_id": {"$ne": ObjectId(requestor_id)},
-                },
-                {"_id": 1},
-            )
+        filt = eligible_donor_filter(
+            blood_group=blood_request.get("bloodGroup"),
+            exclude_user_id=ObjectId(requestor_id),
         )
+        matching = list(db.users.find(filt, {"_id": 1}))
         if not matching:
             return
 

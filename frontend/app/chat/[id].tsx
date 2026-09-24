@@ -8,6 +8,7 @@ import { Colors, Spacing } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { useChat } from '@/context/ChatContext';
+import { useToast } from '@/context/ToastContext';
 import { chatService } from '@/utils/api';
 import type { Message, Chat } from '@/types';
 
@@ -16,7 +17,8 @@ export default function ChatRoomScreen() {
   const colorScheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const theme = Colors[colorScheme];
   const { user } = useAuth();
-  const { socket, joinChat, sendMessage: sendSocketMessage } = useChat();
+  const { showToast } = useToast();
+  const { socket, joinChat } = useChat();
 
   const [chat, setChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -31,16 +33,26 @@ export default function ChatRoomScreen() {
   }, [id]);
 
   useEffect(() => {
-    if (socket) {
-      const handler = (newMessage: Message) => {
-        if (newMessage.senderId !== user?.id) {
-          setMessages((prev) => [...prev, newMessage]);
-        }
-      };
-      socket.on('receive_message', handler);
-      return () => { socket.off('receive_message', handler); };
-    }
-  }, [socket, user]);
+    if (!socket) return;
+
+    const onMessage = (newMessage: Message) => {
+      setMessages((prev) => {
+        if (prev.some((m) => m._id === newMessage._id)) return prev;
+        return [...prev, newMessage];
+      });
+    };
+    const onReconnect = () => {
+      fetchMessages();
+      joinChat(id as string);
+    };
+
+    socket.on('receive_message', onMessage);
+    socket.on('connect', onReconnect);
+    return () => {
+      socket.off('receive_message', onMessage);
+      socket.off('connect', onReconnect);
+    };
+  }, [socket, id, user]);
 
   const fetchChatDetails = async () => {
     try {
@@ -68,8 +80,9 @@ export default function ChatRoomScreen() {
     const text = inputText.trim();
     setInputText('');
 
+    const tempId = `temp-${Date.now()}`;
     const tempMessage: Message = {
-      _id: Date.now().toString(),
+      _id: tempId,
       chatId: id as string,
       senderId: user?.id || '',
       text,
@@ -79,12 +92,16 @@ export default function ChatRoomScreen() {
     setMessages((prev) => [...prev, tempMessage]);
 
     try {
-      await chatService.sendMessage(id as string, text);
-      sendSocketMessage(id as string, text);
+      const response = await chatService.sendMessage(id as string, text);
+      const saved = response.data.data as Message;
+      setMessages((prev) => prev.map((m) => (m._id === tempId ? saved : m)));
     } catch (error) {
       console.error('Error sending message:', error);
+      setMessages((prev) => prev.filter((m) => m._id !== tempId));
+      setInputText(text);
+      showToast({ message: 'Failed to send message', type: 'error' });
     }
-  }, [inputText, id, user, sendSocketMessage]);
+  }, [inputText, id, user, showToast]);
 
   const otherUser = chat?.participants.find((p) => p._id !== user?.id);
   const displayName =

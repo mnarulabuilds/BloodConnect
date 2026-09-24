@@ -5,6 +5,7 @@ import pytest
 
 os.environ.setdefault("JWT_SECRET", "test_jwt_secret_for_unit_tests_only_32chars")
 os.environ.setdefault("MONGODB_URI", "mongodb://localhost/bloodconnect_test")
+os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("NODE_ENV", "test")
 os.environ.setdefault("CORS_ORIGIN", "*")
 

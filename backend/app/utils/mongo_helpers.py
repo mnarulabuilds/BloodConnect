@@ -66,9 +66,16 @@ def default_donor_projection(extra_fields: set[str] | None = None) -> dict[str, 
     return projection
 
 
-def donor_public(user: dict[str, Any]) -> dict[str, Any]:
+def donor_public(user: dict[str, Any], *, include_phone: bool = False) -> dict[str, Any]:
     serialized = serialize_doc(user) or {}
-    return {key: serialized[key] for key in DONOR_PUBLIC_FIELDS if key in serialized} | {"_id": serialized.get("_id")}
+    public_fields = DONOR_PUBLIC_FIELDS if include_phone else tuple(f for f in DONOR_PUBLIC_FIELDS if f != "phone")
+    return {key: serialized[key] for key in public_fields if key in serialized} | {"_id": serialized.get("_id")}
+
+
+def requestor_public(user: dict[str, Any] | None) -> dict[str, str] | None:
+    if not user:
+        return None
+    return {"_id": str(user["_id"]), "name": user.get("name", "Unknown")}
 
 
 def user_public(user: dict[str, Any]) -> dict[str, Any]:

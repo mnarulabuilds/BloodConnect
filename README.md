@@ -114,7 +114,9 @@ docker compose up -d
 | POST | /api/requests | Yes | Create blood request |
 | PUT | /api/requests/:id | Yes | Update blood request |
 | DELETE | /api/requests/:id | Yes | Delete blood request |
+| GET | /api/users/me | Yes | Current user profile |
 | PUT | /api/users/profile | Yes | Update user profile |
+| DELETE | /api/users/me | Yes | Delete account and related data |
 | GET | /api/chats | Yes | List user's chats |
 | GET | /api/chats/:id | Yes | Get single chat |
 | POST | /api/chats | Yes | Start a chat |

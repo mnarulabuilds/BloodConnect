@@ -8,13 +8,12 @@ const SOCKET_URL = resolveSocketBaseUrl();
 interface ChatContextType {
   socket: Socket | null;
   joinChat: (chatId: string) => void;
-  sendMessage: (chatId: string, text: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
   const activeChatRef = useRef<string | null>(null);
 
@@ -57,17 +56,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [socket]
   );
 
-  const sendMessage = useCallback(
-    (chatId: string, text: string) => {
-      if (socket?.connected && user) {
-        socket.emit('send_message', { chatId, text, createdAt: new Date() });
-      }
-    },
-    [socket, user]
-  );
-
   return (
-    <ChatContext.Provider value={{ socket, joinChat, sendMessage }}>
+    <ChatContext.Provider value={{ socket, joinChat }}>
       {children}
     </ChatContext.Provider>
   );

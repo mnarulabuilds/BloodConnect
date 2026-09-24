@@ -120,7 +120,9 @@ export const authService = {
 };
 
 export const userService = {
+  getMe: () => api.get('/users/me'),
   updateProfile: (userData: Record<string, unknown>) => api.put('/users/profile', userData),
+  deleteAccount: () => api.delete('/users/me'),
 };
 
 export const donorService = {

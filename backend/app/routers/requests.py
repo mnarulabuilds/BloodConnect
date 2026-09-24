@@ -1,28 +1,31 @@
 from datetime import datetime, timedelta, timezone
 
 from bson import ObjectId
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 
 from app.db import get_db
 from app.dependencies import get_current_user
+from app.rate_limit import limiter, public_api_limit
 from app.schemas import CreateRequestBody, UpdateRequestBody
-from app.utils.mongo_helpers import is_valid_object_id, serialize_doc
+from app.utils.mongo_helpers import is_valid_object_id, requestor_public, serialize_doc
 from app.utils.push import notify_matching_donors
 
 router = APIRouter(prefix="/api/requests", tags=["requests"])
 
 
-def _populate_requestor(doc: dict) -> dict:
+def _serialize_public_request(doc: dict) -> dict:
     serialized = serialize_doc(doc) or {}
     requestor_id = doc.get("requestor")
     if isinstance(requestor_id, ObjectId):
-        user = get_db().users.find_one({"_id": requestor_id}, {"name": 1, "phone": 1})
-        serialized["requestor"] = serialize_doc(user) if user else str(requestor_id)
+        user = get_db().users.find_one({"_id": requestor_id}, {"name": 1})
+        serialized["requestor"] = requestor_public(user)
     return serialized
 
 
 @router.get("")
+@limiter.limit(public_api_limit())
 def get_requests(
+    request: Request,
     page: int = 1,
     limit: int = 10,
     bloodGroup: str | None = None,
@@ -43,7 +46,7 @@ def get_requests(
     skip = (page - 1) * limit
     docs = list(db.bloodrequests.find(filt).sort("createdAt", -1).skip(skip).limit(limit))
     total = db.bloodrequests.count_documents(filt)
-    data = [_populate_requestor(doc) for doc in docs]
+    data = [_serialize_public_request(doc) for doc in docs]
     return {
         "success": True,
         "totalCount": total,
@@ -85,16 +88,17 @@ def update_request(request_id: str, body: UpdateRequestBody, user=Depends(get_cu
     if not existing:
         raise HTTPException(status_code=404, detail={"success": False, "error": "Request not found"})
 
-    if str(existing.get("requestor")) != str(user["_id"]) and user.get("role") != "admin":
+    if str(existing.get("requestor")) != str(user["_id"]):
         raise HTTPException(status_code=403, detail={"success": False, "error": "Not authorized to update this request"})
 
     updates = body.model_dump(exclude_unset=True)
-    if updates.get("status") == "completed" and updates.get("donor"):
-        if not is_valid_object_id(updates["donor"]):
-            raise HTTPException(status_code=400, detail={"success": False, "error": "Invalid donor ID", "code": "VALIDATION_ERROR"})
+    if updates.get("status") == "completed":
+        donor_id = updates.get("donor")
+        if not donor_id or not is_valid_object_id(donor_id):
+            raise HTTPException(status_code=400, detail={"success": False, "error": "Valid donor ID required to complete request"})
         next_eligible = datetime.now(timezone.utc) + timedelta(days=90)
         db.users.update_one(
-            {"_id": ObjectId(updates["donor"])},
+            {"_id": ObjectId(donor_id)},
             {
                 "$set": {
                     "lastDonationDate": datetime.now(timezone.utc),
@@ -121,7 +125,7 @@ def delete_request(request_id: str, user=Depends(get_current_user)):
     if not existing:
         raise HTTPException(status_code=404, detail={"success": False, "error": "Request not found"})
 
-    if str(existing.get("requestor")) != str(user["_id"]) and user.get("role") != "admin":
+    if str(existing.get("requestor")) != str(user["_id"]):
         raise HTTPException(status_code=403, detail={"success": False, "error": "Not authorized to delete this request"})
 
     db.bloodrequests.delete_one({"_id": ObjectId(request_id)})

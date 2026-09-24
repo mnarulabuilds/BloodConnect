@@ -15,6 +15,7 @@ from app.config import get_settings
 from app.cors import wrap_cors
 from app.db import close_client, ensure_indexes, get_client, get_db
 from app.rate_limit import limiter
+from app.realtime import set_socket_server
 from app.dependencies import http_exception_handler
 from app.routers import auth, chats, donors, notifications, requests, users
 from app.socketio_events import create_socket_server, register_socket_events
@@ -24,6 +25,7 @@ logging.basicConfig(level=logging.INFO)
 
 sio = create_socket_server()
 register_socket_events(sio)
+set_socket_server(sio)
 
 
 @asynccontextmanager

@@ -58,7 +58,7 @@ function RootLayoutNav() {
     const responseSub = addNotificationResponseListener((response) => {
       const data = response.notification.request.content.data;
       if (data?.requestId) {
-        router.push('/all-requests');
+        router.push({ pathname: '/all-requests', params: { highlight: String(data.requestId) } });
       }
     });
 

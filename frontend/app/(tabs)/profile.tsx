@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Switch, useColorS
 import { Colors, Spacing } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
+import { userService } from '@/utils/api';
 import { useToast } from '@/context/ToastContext';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -76,12 +77,27 @@ export default function ProfileScreen() {
         }
     };
 
+    const handleDeleteAccount = async () => {
+        try {
+            await userService.deleteAccount();
+            await logout();
+            router.replace('/(auth)/login');
+            showToast({ message: 'Account deleted', type: 'success' });
+        } catch (e: unknown) {
+            const err = e as { message?: string };
+            showToast({ message: err.message || 'Failed to delete account', type: 'error' });
+        }
+    };
+
     const handleRoleSwitch = async (newRole: 'donor' | 'hospital') => {
         if (user?.role === newRole) return;
 
         setIsUpdatingRole(true);
         try {
-            await updateUser({ role: newRole });
+            await updateUser({
+                role: newRole,
+                ...(newRole === 'donor' && user?.bloodGroup ? { bloodGroup: user.bloodGroup } : {}),
+            });
             showToast({ message: `Identity switched to ${newRole === 'donor' ? 'Donor' : 'Recipient'}`, type: 'success' });
         } catch (e: any) {
             showToast({ message: e.message || 'Failed to switch identity', type: 'error' });
@@ -311,6 +327,24 @@ export default function ProfileScreen() {
                     <OptionItem icon="shield-checkmark-outline" title="Privacy & Security" />
                     <OptionItem icon="help-circle-outline" title="Help & Support" />
                 </View>
+
+                <TouchableOpacity
+                    style={[styles.logoutBtn, { borderColor: theme.error, marginBottom: Spacing.sm }]}
+                    onPress={() => {
+                        const runDelete = () => handleDeleteAccount();
+                        if (Platform.OS === 'web') {
+                            if (window.confirm('Permanently delete your account and data?')) runDelete();
+                        } else {
+                            Alert.alert('Delete account', 'This permanently removes your profile, chats, and requests.', [
+                                { text: 'Cancel', style: 'cancel' },
+                                { text: 'Delete', style: 'destructive', onPress: runDelete },
+                            ]);
+                        }
+                    }}
+                >
+                    <Ionicons name="trash-outline" size={20} color={theme.error} />
+                    <Text style={[styles.logoutText, { color: theme.error }]}>Delete Account</Text>
+                </TouchableOpacity>
 
                 <TouchableOpacity
                     style={[styles.logoutBtn, { borderColor: theme.error }]}

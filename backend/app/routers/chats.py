@@ -1,30 +1,21 @@
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from app.db import get_db
 from app.dependencies import get_current_user
+from app.realtime import get_socket_server
 from app.schemas import SendMessageBody, StartChatBody
+from app.services.chat_serialization import serialize_chat, serialize_chats
+from app.services.messages import persist_chat_message
 from app.utils.mongo_helpers import is_valid_object_id, serialize_doc
 
 router = APIRouter(prefix="/api/chats", tags=["chats"])
 
 
-def _participant(user_id: ObjectId):
-    return get_db().users.find_one({"_id": user_id}, {"name": 1, "bloodGroup": 1, "avatar": 1, "role": 1})
-
-
-def _serialize_chat(chat: dict) -> dict:
-    data = serialize_doc(chat) or {}
-    participants = []
-    for pid in chat.get("participants", []):
-        user = _participant(pid if isinstance(pid, ObjectId) else ObjectId(pid))
-        if user:
-            participants.append(serialize_doc(user))
-    data["participants"] = participants
-    if chat.get("lastMessage"):
-        msg = get_db().messages.find_one({"_id": chat["lastMessage"]})
-        data["lastMessage"] = serialize_doc(msg) if msg else None
-    return data
+async def _emit_message(chat_id: str, payload: dict) -> None:
+    sio = get_socket_server()
+    if sio:
+        await sio.emit("receive_message", payload, room=chat_id)
 
 
 @router.get("")
@@ -42,7 +33,7 @@ def get_chats(page: int = 1, limit: int = 20, user=Depends(get_current_user)):
         "totalPages": (total + limit - 1) // limit,
         "currentPage": page,
         "count": len(chats),
-        "data": [_serialize_chat(chat) for chat in chats],
+        "data": serialize_chats(chats),
     }
 
 
@@ -87,7 +78,7 @@ def get_chat(chat_id: str, user=Depends(get_current_user)):
         raise HTTPException(status_code=404, detail={"success": False, "error": "Chat not found"})
     if user["_id"] not in chat.get("participants", []):
         raise HTTPException(status_code=403, detail={"success": False, "error": "Not authorized to view this chat"})
-    return {"success": True, "data": _serialize_chat(chat)}
+    return {"success": True, "data": serialize_chat(chat)}
 
 
 @router.get("/{chat_id}/messages")
@@ -118,28 +109,20 @@ def get_messages(chat_id: str, page: int = 1, limit: int = 50, user=Depends(get_
 
 
 @router.post("/{chat_id}/messages")
-def send_message(chat_id: str, body: SendMessageBody, user=Depends(get_current_user)):
-    if not is_valid_object_id(chat_id):
-        raise HTTPException(status_code=400, detail={"success": False, "error": "Invalid chat ID", "code": "VALIDATION_ERROR"})
-    db = get_db()
-    chat = db.chats.find_one({"_id": ObjectId(chat_id)})
-    if not chat:
+def send_message(
+    chat_id: str,
+    body: SendMessageBody,
+    background_tasks: BackgroundTasks,
+    user=Depends(get_current_user),
+):
+    try:
+        payload = persist_chat_message(chat_id, user["_id"], body.text)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail={"success": False, "error": str(exc), "code": "VALIDATION_ERROR"})
+    except LookupError:
         raise HTTPException(status_code=404, detail={"success": False, "error": "Chat not found"})
-    if user["_id"] not in chat.get("participants", []):
+    except PermissionError:
         raise HTTPException(status_code=403, detail={"success": False, "error": "Not authorized to send messages in this chat"})
 
-    from datetime import datetime, timezone
-
-    now = datetime.now(timezone.utc)
-    message = {
-        "chatId": ObjectId(chat_id),
-        "senderId": user["_id"],
-        "text": body.text.strip(),
-        "read": False,
-        "createdAt": now,
-        "updatedAt": now,
-    }
-    result = db.messages.insert_one(message)
-    message["_id"] = result.inserted_id
-    db.chats.update_one({"_id": ObjectId(chat_id)}, {"$set": {"lastMessage": result.inserted_id, "updatedAt": now}})
-    return {"success": True, "data": serialize_doc(message)}
+    background_tasks.add_task(_emit_message, chat_id, payload)
+    return {"success": True, "data": payload}

@@ -108,7 +108,7 @@ def forgot_password(request: Request, body: ForgotPasswordBody, background_tasks
     message = (
         "Hello,\n\nYou requested to reset your password.\n\n"
         f"Click the link below:\n\n{reset_url}\n\n"
-        "This link will expire in 15 minutes.\n\nIf you didn't request this, simply ignore this email."
+        "This link will expire in 10 minutes.\n\nIf you didn't request this, simply ignore this email."
     )
     background_tasks.add_task(send_email, user["email"], "Password Reset", message)
     return {"success": True, "data": "If an account with that email exists, a reset link has been sent"}

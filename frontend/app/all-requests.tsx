@@ -4,28 +4,15 @@ import {
     useColorScheme, ActivityIndicator, Animated,
     ScrollView, TextInput, RefreshControl, Platform
 } from 'react-native';
-import { useFocusEffect, router } from 'expo-router';
+import { useFocusEffect, router, useLocalSearchParams } from 'expo-router';
+import type { BloodRequest } from '@/types';
+import { getRequestorId } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '@/constants/theme';
 import { BLOOD_GROUPS } from '@/constants/data';
 import { requestService, chatService } from '@/utils/api';
 import { useToast } from '@/context/ToastContext';
 import { useAuth } from '@/context/AuthContext';
-
-// ─── Types ────────────────────────────────────────────────────────────────
-interface BloodRequest {
-    _id: string;
-    patientName: string;
-    bloodGroup: string;
-    hospital: string;
-    location: string;
-    urgency: 'Normal' | 'Urgent' | 'Critical';
-    units: number;
-    contact: string;
-    status: 'open' | 'completed' | 'cancelled';
-    requestor: { _id?: string; name?: string; phone?: string } | string;
-    createdAt: string;
-}
 
 const URGENCY_CONFIG: Record<string, { bg: string; text: string; icon: string }> = {
     Critical: { bg: '#FFEBEE', text: '#C62828', icon: 'alert-circle' },
@@ -65,6 +52,7 @@ function SkeletonRow({ theme }: { theme: typeof Colors.light }) {
 
 // ─── Main Screen ──────────────────────────────────────────────────────────
 export default function AllRequestsScreen() {
+    const { highlight } = useLocalSearchParams<{ highlight?: string }>();
     const colorScheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
     const theme = Colors[colorScheme];
     const { showToast } = useToast();
@@ -109,7 +97,7 @@ export default function AllRequestsScreen() {
     useFocusEffect(useCallback(() => { fetchRequests(1); }, [fetchRequests]));
 
     const handleHelp = async (req: BloodRequest) => {
-        const requestorId = typeof req.requestor === 'string' ? req.requestor : req.requestor?._id;
+        const requestorId = getRequestorId(req.requestor);
         if (!requestorId) { showToast({ message: 'Cannot open chat for this request.', type: 'error' }); return; }
         if (requestorId === user?.id) { showToast({ message: 'This is your own request.', type: 'info' as any }); return; }
 
@@ -139,10 +127,13 @@ export default function AllRequestsScreen() {
         const stConf = STATUS_CONFIG[item.status] ?? STATUS_CONFIG.open;
         const isOdd = index % 2 === 0;
 
+        const isHighlighted = highlight && item._id === highlight;
+
         return (
             <View style={[
                 styles.row,
                 { backgroundColor: isOdd ? theme.background : theme.surface },
+                isHighlighted && { borderWidth: 2, borderColor: theme.primary },
             ]}>
                 {/* Blood Group */}
                 <View style={[styles.cell, styles.cellBlood]}>

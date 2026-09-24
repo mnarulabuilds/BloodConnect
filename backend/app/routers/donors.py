@@ -1,10 +1,11 @@
-from datetime import datetime, timezone
-
 from bson import ObjectId
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from app.config import BLOOD_GROUPS
 from app.db import get_db
+from app.dependencies import get_optional_user
+from app.rate_limit import limiter, public_api_limit
+from app.services.donor_eligibility import eligible_donor_filter
 from app.utils.mongo_helpers import (
     ALLOWED_DONOR_SELECT,
     default_donor_projection,
@@ -17,14 +18,10 @@ ALLOWED_SORT = {"createdAt", "name", "bloodGroup", "location"}
 
 
 @router.get("/stats")
-def get_donor_stats():
+@limiter.limit(public_api_limit())
+def get_donor_stats(request: Request):
     db = get_db()
-    eligibility = {
-        "role": "donor",
-        "isAvailable": True,
-        "nextEligibleDate": {"$lte": datetime.now(timezone.utc)},
-        "isMedicalHistoryClear": True,
-    }
+    eligibility = eligible_donor_filter()
     donor_count = db.users.count_documents(eligibility)
     saved_count = db.bloodrequests.count_documents({"status": "completed"})
     pipeline = [{"$match": eligibility}, {"$group": {"_id": "$bloodGroup", "count": {"$sum": 1}}}]
@@ -33,7 +30,9 @@ def get_donor_stats():
 
 
 @router.get("")
+@limiter.limit(public_api_limit())
 def get_donors(
+    request: Request,
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     bloodGroup: str | None = None,
@@ -42,16 +41,11 @@ def get_donors(
     radius: float | None = 10,
     select: str | None = None,
     sort: str | None = None,
+    viewer=Depends(get_optional_user),
 ):
     db = get_db()
-    filt = {
-        "role": "donor",
-        "isAvailable": True,
-        "nextEligibleDate": {"$lte": datetime.now(timezone.utc)},
-        "isMedicalHistoryClear": True,
-    }
-    if bloodGroup and bloodGroup in BLOOD_GROUPS:
-        filt["bloodGroup"] = bloodGroup
+    bg = bloodGroup if bloodGroup in BLOOD_GROUPS else None
+    filt = eligible_donor_filter(blood_group=bg)
 
     if latitude is not None and longitude is not None:
         if -90 <= latitude <= 90 and -180 <= longitude <= 180:
@@ -86,7 +80,8 @@ def get_donors(
 
     skip = (page - 1) * limit
     cursor = db.users.find(filt, projection).sort(sort_spec).skip(skip).limit(limit)
-    donors = [donor_public(doc) for doc in cursor]
+    include_phone = viewer is not None
+    donors = [donor_public(doc, include_phone=include_phone) for doc in cursor]
     total = db.users.count_documents(filt)
     return {
         "success": True,
@@ -99,10 +94,11 @@ def get_donors(
 
 
 @router.get("/{donor_id}")
-def get_donor(donor_id: str):
+@limiter.limit(public_api_limit())
+def get_donor(donor_id: str, request: Request, viewer=Depends(get_optional_user)):
     if not ObjectId.is_valid(donor_id):
         raise HTTPException(status_code=400, detail={"success": False, "error": f"Invalid id: {donor_id}"})
     donor = get_db().users.find_one({"_id": ObjectId(donor_id)}, default_donor_projection())
     if not donor or donor.get("role") != "donor":
         raise HTTPException(status_code=404, detail={"success": False, "error": "Donor not found"})
-    return {"success": True, "data": donor_public(donor)}
+    return {"success": True, "data": donor_public(donor, include_phone=viewer is not None)}

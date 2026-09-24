@@ -38,7 +38,7 @@ export interface BloodRequest {
   units: number;
   contact: string;
   status: 'open' | 'completed' | 'cancelled';
-  requestor: { _id?: string; name?: string; phone?: string } | string;
+  requestor: { _id?: string; name?: string } | string;
   donor?: string;
   createdAt: string;
 }
@@ -133,6 +133,11 @@ export interface RequestFilterParams extends PaginationParams {
   bloodGroup?: string;
   urgency?: string;
   status?: string;
+}
+
+export function getRequestorId(requestor: BloodRequest['requestor']): string {
+  if (typeof requestor === 'string') return requestor;
+  return requestor?._id ?? '';
 }
 
 export interface DonorFilterParams extends PaginationParams {

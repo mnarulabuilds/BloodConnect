@@ -26,7 +26,7 @@ def is_dev_origin(origin: str | None) -> bool:
 
 def wrap_cors(asgi_app: ASGIApp) -> ASGIApp:
     settings = get_settings()
-    is_dev = settings["NODE_ENV"] in ("development", "test")
+    is_dev = settings["APP_ENV"] in ("development", "test")
 
     if is_dev:
         return CORSMiddleware(
