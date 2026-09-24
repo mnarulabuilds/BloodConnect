@@ -46,7 +46,7 @@ npm run dev:docker
 ```
 
 - Web app: [http://localhost:8081](http://localhost:8081)
-- API: [http://localhost:5000](http://localhost:5000)
+- API: [http://localhost:5001](http://localhost:5001) (host port 5001; macOS often reserves 5000 for AirPlay)
 - MongoDB: `localhost:27017`
 
 Optional env overrides:
