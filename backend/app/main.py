@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager
 import socketio
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -13,6 +12,7 @@ from slowapi.util import get_remote_address
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import get_settings
+from app.cors import wrap_cors
 from app.db import close_client, get_client, get_db
 from app.dependencies import http_exception_handler
 from app.routers import auth, chats, donors, notifications, requests, users
@@ -40,14 +40,6 @@ def create_app() -> FastAPI:
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
-
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings["CORS_ORIGINS"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(_request: Request, exc: RequestValidationError):
@@ -92,4 +84,4 @@ def create_app() -> FastAPI:
 
 
 fastapi_app = create_app()
-combined_app = socketio.ASGIApp(sio, other_asgi_app=fastapi_app)
+combined_app = wrap_cors(socketio.ASGIApp(sio, other_asgi_app=fastapi_app))

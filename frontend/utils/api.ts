@@ -8,8 +8,9 @@ import type {
   DonorFilterParams,
   PaginationParams,
 } from '@/types';
+import { resolveApiBaseUrl } from './apiBase';
 
-const API_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5001/api';
+const API_URL = resolveApiBaseUrl();
 
 const api = axios.create({
   baseURL: API_URL,

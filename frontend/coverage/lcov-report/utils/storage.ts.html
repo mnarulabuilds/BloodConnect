@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">94.73% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>18/19</span>
+                <span class='fraction'>0/19</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">91.66% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>11/12</span>
+                <span class='fraction'>0/12</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>3/3</span>
+                <span class='fraction'>0/3</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">94.73% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>18/19</span>
+                <span class='fraction'>0/19</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -108,40 +108,40 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -149,40 +149,40 @@
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 &nbsp;
-const SECURE_KEYS = ['accessToken', 'refreshToken'];
+const SECURE_KEYS = <span class="cstat-no" title="statement not covered" >['accessToken', 'refreshToken'];</span>
 &nbsp;
-export const storage = {
-  async setItem(key: string, value: string) {
-    if (Platform.OS === 'web') {
-      try {
-        localStorage.setItem(key, value);
+export const storage = <span class="cstat-no" title="statement not covered" >{</span>
+<span class="fstat-no" title="function not covered" >  as</span>ync setItem(key: string, value: string) {
+<span class="cstat-no" title="statement not covered" >    if (Platform.OS === 'web') {</span>
+<span class="cstat-no" title="statement not covered" >      try {</span>
+<span class="cstat-no" title="statement not covered" >        localStorage.setItem(key, value);</span>
       } catch (e) {
-        console.error('localStorage failed', e);
+<span class="cstat-no" title="statement not covered" >        console.error('localStorage failed', e);</span>
       }
-    } else if (SECURE_KEYS.includes(key)) {
-      await SecureStore.setItemAsync(key, value);
+    } else <span class="cstat-no" title="statement not covered" >if (SECURE_KEYS.includes(key)) {</span>
+<span class="cstat-no" title="statement not covered" >      await SecureStore.setItemAsync(key, value);</span>
     } else {
-      await AsyncStorage.setItem(key, value);
+<span class="cstat-no" title="statement not covered" >      await AsyncStorage.setItem(key, value);</span>
     }
   },
 &nbsp;
-  async getItem(key: string): Promise&lt;string | null&gt; {
-    if (Platform.OS === 'web') {
-      return localStorage.getItem(key);
-    } else if (SECURE_KEYS.includes(key)) {
-      return await SecureStore.getItemAsync(key);
-    } else <span class="missing-if-branch" title="else path not taken" >E</span>{
+<span class="fstat-no" title="function not covered" >  as</span>ync getItem(key: string): Promise&lt;string | null&gt; {
+<span class="cstat-no" title="statement not covered" >    if (Platform.OS === 'web') {</span>
+<span class="cstat-no" title="statement not covered" >      return localStorage.getItem(key);</span>
+    } else <span class="cstat-no" title="statement not covered" >if (SECURE_KEYS.includes(key)) {</span>
+<span class="cstat-no" title="statement not covered" >      return await SecureStore.getItemAsync(key);</span>
+    } else {
 <span class="cstat-no" title="statement not covered" >      return await AsyncStorage.getItem(key);</span>
     }
   },
 &nbsp;
-  async removeItem(key: string) {
-    if (Platform.OS === 'web') {
-      localStorage.removeItem(key);
-    } else if (SECURE_KEYS.includes(key)) {
-      await SecureStore.deleteItemAsync(key);
+<span class="fstat-no" title="function not covered" >  as</span>ync removeItem(key: string) {
+<span class="cstat-no" title="statement not covered" >    if (Platform.OS === 'web') {</span>
+<span class="cstat-no" title="statement not covered" >      localStorage.removeItem(key);</span>
+    } else <span class="cstat-no" title="statement not covered" >if (SECURE_KEYS.includes(key)) {</span>
+<span class="cstat-no" title="statement not covered" >      await SecureStore.deleteItemAsync(key);</span>
     } else {
-      await AsyncStorage.removeItem(key);
+<span class="cstat-no" title="statement not covered" >      await AsyncStorage.removeItem(key);</span>
     }
   },
 };
@@ -193,7 +193,7 @@ export const storage = {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-09-24T15:01:33.353Z
+                at 2026-09-24T15:07:40.005Z
             </div>
         <script src="../prettify.js"></script>
         <script>

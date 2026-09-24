@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
+import { resolveSocketBaseUrl } from '@/utils/apiBase';
 
-const SOCKET_URL = process.env.EXPO_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://localhost:5001';
+const SOCKET_URL = resolveSocketBaseUrl();
 
 interface ChatContextType {
   socket: Socket | null;

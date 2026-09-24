@@ -14,9 +14,12 @@ logger = logging.getLogger("bloodconnect.socket")
 
 def create_socket_server() -> socketio.AsyncServer:
     settings = get_settings()
+    is_dev = settings["NODE_ENV"] in ("development", "test")
+    # Dev: allow any origin (matches REST CORS regex); prod: explicit list
+    cors_origins = "*" if is_dev else settings["CORS_ORIGINS"]
     return socketio.AsyncServer(
         async_mode="asgi",
-        cors_allowed_origins=settings["CORS_ORIGINS"],
+        cors_allowed_origins=cors_origins,
         logger=False,
         engineio_logger=False,
     )

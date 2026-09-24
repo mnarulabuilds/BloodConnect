@@ -4,6 +4,7 @@ module.exports = {
   testMatch: ['**/__tests__/**/*.(test|spec).(ts|tsx)'],
   collectCoverageFrom: [
     'utils/validation.ts',
+    'utils/apiBase.ts',
     'utils/select.ts',
     'utils/accessibility.ts',
     'utils/storage.ts',

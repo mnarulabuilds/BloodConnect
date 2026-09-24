@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>11/11</span>
+                <span class='fraction'>0/11</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">87.5% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>14/16</span>
+                <span class='fraction'>0/16</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>3/3</span>
+                <span class='fraction'>0/3</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>11/11</span>
+                <span class='fraction'>0/11</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -100,26 +100,26 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -130,29 +130,29 @@
   message?: string;
 }
 &nbsp;
-export function validateEmail(email: string): FieldValidationResult {
-  if (!email.trim()) {
-    return { valid: false, message: 'Email address is required' };
+export function <span class="fstat-no" title="function not covered" >validateEmail(</span>email: string): FieldValidationResult {
+<span class="cstat-no" title="statement not covered" >  if (!email.trim()) {</span>
+<span class="cstat-no" title="statement not covered" >    return { valid: false, message: 'Email address is required' };</span>
   }
-  if (!/\S+@\S+\.\S+/.test(email)) {
-    return { valid: false, message: 'Please enter a valid email' };
+<span class="cstat-no" title="statement not covered" >  if (!/\S+@\S+\.\S+/.test(email)) {</span>
+<span class="cstat-no" title="statement not covered" >    return { valid: false, message: 'Please enter a valid email' };</span>
   }
-  return { valid: true };
+<span class="cstat-no" title="statement not covered" >  return { valid: true };</span>
 }
 &nbsp;
-export function validateRequired(value: string, label: string): FieldValidationResult {
-  if (!value.trim()) {
-    return { valid: false, message: `${label} is required` };
+export function <span class="fstat-no" title="function not covered" >validateRequired(</span>value: string, label: string): FieldValidationResult {
+<span class="cstat-no" title="statement not covered" >  if (!value.trim()) {</span>
+<span class="cstat-no" title="statement not covered" >    return { valid: false, message: `${label} is required` };</span>
   }
-  return { valid: true };
+<span class="cstat-no" title="statement not covered" >  return { valid: true };</span>
 }
 &nbsp;
-export function validateLoginForm(email: string, password: string) {
-  const emailResult = validateEmail(email);
-  const passwordResult = validateRequired(password, 'Password');
-  return {
-    emailError: emailResult.valid ? '' : emailResult.message ?? <span class="branch-1 cbranch-no" title="branch not covered" >'',</span>
-    passwordError: passwordResult.valid ? '' : passwordResult.message ?? <span class="branch-1 cbranch-no" title="branch not covered" >'',</span>
+export function <span class="fstat-no" title="function not covered" >validateLoginForm(</span>email: string, password: string) {
+  const emailResult = <span class="cstat-no" title="statement not covered" >validateEmail(email);</span>
+  const passwordResult = <span class="cstat-no" title="statement not covered" >validateRequired(password, 'Password');</span>
+<span class="cstat-no" title="statement not covered" >  return {</span>
+    emailError: emailResult.valid ? '' : emailResult.message ?? '',
+    passwordError: passwordResult.valid ? '' : passwordResult.message ?? '',
     isValid: emailResult.valid &amp;&amp; passwordResult.valid,
   };
 }
@@ -163,7 +163,7 @@ export function validateLoginForm(email: string, password: string) {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-09-24T15:01:33.353Z
+                at 2026-09-24T15:07:40.005Z
             </div>
         <script src="../prettify.js"></script>
         <script>
