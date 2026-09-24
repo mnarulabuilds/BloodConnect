@@ -4,6 +4,7 @@ import { Colors, Spacing } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import axios from 'axios';
+import { resolveApiBaseUrl } from '@/utils/apiBase';
 
 export default function ForgotPasswordScreen() {
     const colorScheme = useColorScheme() ?? 'light';
@@ -26,7 +27,7 @@ export default function ForgotPasswordScreen() {
         setSuccessMessage('');
 
         try {
-            const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
+            const baseUrl = resolveApiBaseUrl();
             await axios.post(`${baseUrl}/auth/forgotpassword`, { email });
 
             setSuccessMessage('If an account with that email exists, a password reset link has been sent.');

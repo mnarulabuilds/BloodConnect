@@ -18,6 +18,11 @@ describe('apiBase', () => {
     expect(resolveSocketBaseUrl()).toBe('http://custom:5001');
   });
 
+  it('rewrites stale localhost:5000 to 5001', () => {
+    process.env.EXPO_PUBLIC_API_BASE_URL = 'http://localhost:5000/api';
+    expect(resolveApiBaseUrl()).toBe('http://localhost:5001/api');
+  });
+
   it('uses window hostname on web when env is unset', () => {
     delete process.env.EXPO_PUBLIC_API_BASE_URL;
     Platform.OS = 'web';

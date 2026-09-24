@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import axios from 'axios';
 import { useToast } from '@/context/ToastContext';
+import { resolveApiBaseUrl } from '@/utils/apiBase';
 
 export default function ResetPasswordScreen() {
     const colorScheme = useColorScheme() ?? 'light';
@@ -41,7 +42,7 @@ export default function ResetPasswordScreen() {
         setGeneralError('');
 
         try {
-            const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
+            const baseUrl = resolveApiBaseUrl();
             await axios.put(`${baseUrl}/auth/resetpassword/${token}`, { password });
 
             showToast({ message: 'Password reset successfully!', type: 'success', duration: 5000 });
