@@ -17,6 +17,7 @@ def mongo_client():
     get_settings.cache_clear()
     client = mongomock.MongoClient()
     db_module.set_client(client)
+    db_module.ensure_indexes()
     yield client[db_module.get_db().name]
     db_module.set_client(None)
     get_settings.cache_clear()

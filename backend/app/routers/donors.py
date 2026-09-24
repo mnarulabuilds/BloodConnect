@@ -5,11 +5,14 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.config import BLOOD_GROUPS
 from app.db import get_db
-from app.utils.mongo_helpers import serialize_doc
+from app.utils.mongo_helpers import (
+    ALLOWED_DONOR_SELECT,
+    default_donor_projection,
+    donor_public,
+)
 
 router = APIRouter(prefix="/api/donors", tags=["donors"])
 
-ALLOWED_SELECT = {"name", "bloodGroup", "location", "phone", "isAvailable", "coordinates", "avatar", "role", "createdAt"}
 ALLOWED_SORT = {"createdAt", "name", "bloodGroup", "location"}
 
 
@@ -59,12 +62,13 @@ def get_donors(
                 }
             }
 
-    projection = None
+    selected_fields: set[str] | None = None
     if select:
-        fields = [f.strip() for f in select.split(",") if f.strip() in ALLOWED_SELECT]
+        fields = {f.strip() for f in select.split(",") if f.strip() in ALLOWED_DONOR_SELECT}
         if fields:
-            projection = {field: 1 for field in fields}
-            projection["_id"] = 1
+            selected_fields = fields
+
+    projection = default_donor_projection(selected_fields)
 
     sort_spec = [("createdAt", -1)]
     if sort:
@@ -82,7 +86,7 @@ def get_donors(
 
     skip = (page - 1) * limit
     cursor = db.users.find(filt, projection).sort(sort_spec).skip(skip).limit(limit)
-    donors = [serialize_doc(doc) for doc in cursor]
+    donors = [donor_public(doc) for doc in cursor]
     total = db.users.count_documents(filt)
     return {
         "success": True,
@@ -98,7 +102,7 @@ def get_donors(
 def get_donor(donor_id: str):
     if not ObjectId.is_valid(donor_id):
         raise HTTPException(status_code=400, detail={"success": False, "error": f"Invalid id: {donor_id}"})
-    donor = get_db().users.find_one({"_id": ObjectId(donor_id)})
+    donor = get_db().users.find_one({"_id": ObjectId(donor_id)}, default_donor_projection())
     if not donor or donor.get("role") != "donor":
         raise HTTPException(status_code=404, detail={"success": False, "error": "Donor not found"})
-    return {"success": True, "data": serialize_doc(donor)}
+    return {"success": True, "data": donor_public(donor)}

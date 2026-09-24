@@ -25,3 +25,11 @@ build/
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+
+# Test & Python artifacts
+coverage/
+htmlcov/
+.coverage
+.pytest_cache/
+__pycache__/
+*.py[cod]

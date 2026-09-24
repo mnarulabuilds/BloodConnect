@@ -1,15 +1,14 @@
 # BloodConnect
 
-A full-stack blood donation platform that connects donors and recipients directly. Built with React Native (Expo) and Node.js/Express.
+A full-stack blood donation platform that connects donors and recipients directly. Built with React Native (Expo) and FastAPI.
 
 ## Architecture
 
 ```
 BloodConnect/
-├── backend/          # Express API + Socket.io server
-│   ├── app/          # FastAPI application (routers, services, Socket.io)
-│   ├── tests/        # pytest suite
-│   └── requirements.txt
+├── backend/          # FastAPI API + Socket.io (python-socketio)
+│   ├── app/          # Application code (routers, utils, Socket.io)
+│   └── tests/        # pytest suite
 ├── frontend/         # React Native (Expo) app
 │   ├── app/          # Screens (Expo Router file-based routing)
 │   ├── components/   # Reusable UI components
@@ -31,12 +30,11 @@ BloodConnect/
 | Database | MongoDB |
 | Auth | JWT (access + refresh tokens), bcrypt |
 | Real-time | Socket.io (authenticated) |
-| Logging | Pino |
-| Security | Helmet, express-rate-limit, express-validator, express-mongo-sanitize |
+| Security | slowapi rate limits, CORS, Pydantic validation |
 
 ## Run locally with Docker (recommended)
 
-One command starts **MongoDB**, **backend (nodemon)**, and **frontend (Expo web)**:
+One command starts **MongoDB**, **backend (uvicorn --reload)**, and **frontend (Expo web)**:
 
 ```bash
 npm run dev:docker
@@ -44,6 +42,7 @@ npm run dev:docker
 
 - Web app: [http://localhost:8081](http://localhost:8081)
 - API: [http://localhost:5001](http://localhost:5001) (host port 5001; macOS often reserves 5000 for AirPlay)
+- OpenAPI docs: [http://localhost:5001/docs](http://localhost:5001/docs)
 - MongoDB: `localhost:27017`
 
 Optional env overrides:

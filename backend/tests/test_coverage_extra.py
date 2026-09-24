@@ -86,7 +86,10 @@ def test_donor_filters_and_get(client, mongo_client):
     res = client.get("/api/donors", params={"bloodGroup": "B+", "select": "name,bloodGroup", "sort": "name"})
     assert res.status_code == 200
     donor_id = res.json()["data"][0]["_id"]
-    assert client.get(f"/api/donors/{donor_id}").status_code == 200
+    detail = client.get(f"/api/donors/{donor_id}")
+    assert detail.status_code == 200
+    assert "password" not in detail.json()["data"]
+    assert "email" not in detail.json()["data"]
     assert client.get("/api/donors/notanid").status_code == 400
     assert client.get(f"/api/donors/{ObjectId()}").status_code == 404
 

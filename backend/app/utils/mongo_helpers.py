@@ -38,6 +38,39 @@ def serialize_doc(doc: dict[str, Any] | None) -> dict[str, Any] | None:
     return out
 
 
+ALLOWED_DONOR_SELECT = {
+    "name",
+    "bloodGroup",
+    "location",
+    "phone",
+    "isAvailable",
+    "coordinates",
+    "avatar",
+    "role",
+    "createdAt",
+}
+
+DONOR_PUBLIC_FIELDS = (
+    *ALLOWED_DONOR_SELECT,
+    "lastDonationDate",
+    "nextEligibleDate",
+    "isMedicalHistoryClear",
+)
+
+def default_donor_projection(extra_fields: set[str] | None = None) -> dict[str, int]:
+    fields = set(DONOR_PUBLIC_FIELDS)
+    if extra_fields:
+        fields &= extra_fields
+    projection = {field: 1 for field in fields}
+    projection["_id"] = 1
+    return projection
+
+
+def donor_public(user: dict[str, Any]) -> dict[str, Any]:
+    serialized = serialize_doc(user) or {}
+    return {key: serialized[key] for key in DONOR_PUBLIC_FIELDS if key in serialized} | {"_id": serialized.get("_id")}
+
+
 def user_public(user: dict[str, Any]) -> dict[str, Any]:
     coords = user.get("coordinates") or {}
     coord_values = coords.get("coordinates") or [None, None]

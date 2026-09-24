@@ -2,9 +2,10 @@ import logging
 from datetime import datetime, timezone
 
 from bson import ObjectId
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 
 from app.config import get_settings
+from app.rate_limit import auth_route_limit, limiter, sensitive_auth_limit
 from app.dependencies import get_current_user
 from app.db import get_db
 from app.schemas import (
@@ -43,7 +44,8 @@ def _token_response(user: dict, status_code: int = 200):
 
 
 @router.post("/register", status_code=201)
-def register(body: RegisterBody):
+@limiter.limit(auth_route_limit())
+def register(request: Request, body: RegisterBody):
     role = "hospital" if body.role == "hospital" else "donor"
     if role == "donor" and not body.bloodGroup:
         raise HTTPException(status_code=400, detail={"success": False, "error": "Donors must specify a blood group"})
@@ -76,7 +78,8 @@ def register(body: RegisterBody):
 
 
 @router.post("/login")
-def login(body: LoginBody):
+@limiter.limit(sensitive_auth_limit())
+def login(request: Request, body: LoginBody):
     user = get_db().users.find_one({"email": body.email.lower()})
     if not user or not verify_password(body.password, user["password"]):
         raise HTTPException(status_code=401, detail={"success": False, "error": "Invalid credentials"})
@@ -84,7 +87,8 @@ def login(body: LoginBody):
 
 
 @router.post("/forgotpassword")
-def forgot_password(body: ForgotPasswordBody, background_tasks: BackgroundTasks):
+@limiter.limit(sensitive_auth_limit())
+def forgot_password(request: Request, body: ForgotPasswordBody, background_tasks: BackgroundTasks):
     db = get_db()
     user = db.users.find_one({"email": body.email.lower()})
     if not user:
@@ -111,7 +115,8 @@ def forgot_password(body: ForgotPasswordBody, background_tasks: BackgroundTasks)
 
 
 @router.put("/resetpassword/{resettoken}")
-def reset_password(resettoken: str, body: ResetPasswordBody):
+@limiter.limit(sensitive_auth_limit())
+def reset_password(request: Request, resettoken: str, body: ResetPasswordBody):
     hashed = __import__("hashlib").sha256(resettoken.encode("utf-8")).hexdigest()
     db = get_db()
     user = db.users.find_one({"resetPasswordToken": hashed, "resetPasswordExpire": {"$gt": datetime.now(timezone.utc)}})
@@ -129,7 +134,8 @@ def reset_password(resettoken: str, body: ResetPasswordBody):
 
 
 @router.post("/refresh")
-def refresh_token(body: RefreshBody):
+@limiter.limit(auth_route_limit())
+def refresh_token(request: Request, body: RefreshBody):
     if not body.refreshToken:
         raise HTTPException(status_code=400, detail={"success": False, "error": "Refresh token is required"})
     try:

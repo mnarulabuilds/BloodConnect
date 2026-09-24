@@ -27,7 +27,11 @@ def test_donor_listing_and_stats(client, mongo_client):
     )
     donors = client.get("/api/donors")
     assert donors.status_code == 200
-    assert donors.json()["totalCount"] >= 1
+    payload = donors.json()
+    assert payload["totalCount"] >= 1
+    if payload["data"]:
+        assert "password" not in payload["data"][0]
+        assert "refreshToken" not in payload["data"][0]
 
     stats = client.get("/api/donors/stats")
     assert stats.status_code == 200

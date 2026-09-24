@@ -24,6 +24,19 @@ let failedQueue: Array<{
   reject: (reason?: unknown) => void;
 }> = [];
 
+let onSessionExpired: (() => void) | null = null;
+
+export function setSessionExpiredHandler(handler: (() => void) | null) {
+  onSessionExpired = handler;
+}
+
+async function clearStoredSession() {
+  await storage.removeItem('accessToken');
+  await storage.removeItem('refreshToken');
+  await storage.removeItem('user');
+  onSessionExpired?.();
+}
+
 const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
@@ -88,9 +101,7 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        await storage.removeItem('accessToken');
-        await storage.removeItem('refreshToken');
-        await storage.removeItem('user');
+        await clearStoredSession();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

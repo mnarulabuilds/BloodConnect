@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { storage } from '../utils/storage';
-import { authService, userService } from '../utils/api';
+import { authService, setSessionExpiredHandler, userService } from '../utils/api';
 import type { User, RegisterData } from '@/types';
 
 interface AuthContextType {
@@ -21,25 +21,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    setSessionExpiredHandler(() => {
+      setToken(null);
+      setUser(null);
+    });
+    return () => setSessionExpiredHandler(null);
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
-    const loadStoredData = async () => {
+    const restoreSession = async () => {
       try {
-        const storedToken = await storage.getItem('accessToken');
-        const storedUser = await storage.getItem('user');
+        const refreshToken = await storage.getItem('refreshToken');
+        if (refreshToken) {
+          const response = await authService.refresh(refreshToken);
+          const { accessToken, refreshToken: newRefresh, user: userData } = response.data;
 
-        if (!cancelled && storedToken && storedUser) {
-          setToken(storedToken);
-          setUser(JSON.parse(storedUser));
+          if (!cancelled) {
+            await storage.setItem('accessToken', accessToken);
+            await storage.setItem('refreshToken', newRefresh);
+            await storage.setItem('user', JSON.stringify(userData));
+            setToken(accessToken);
+            setUser(userData);
+          }
+          return;
+        }
+
+        const storedAccess = await storage.getItem('accessToken');
+        const storedUser = await storage.getItem('user');
+        if (storedAccess || storedUser) {
+          try {
+            await storage.removeItem('accessToken');
+            await storage.removeItem('user');
+          } catch {
+            // Best-effort cleanup of stale partial session
+          }
+        }
+        if (!cancelled) {
+          setToken(null);
+          setUser(null);
         }
       } catch (e) {
-        console.error('Failed to load auth data', e);
+        console.error('Failed to restore session', e);
+        try {
+          await storage.removeItem('accessToken');
+          await storage.removeItem('refreshToken');
+          await storage.removeItem('user');
+        } catch {
+          // Best-effort cleanup after failed refresh
+        }
+        if (!cancelled) {
+          setToken(null);
+          setUser(null);
+        }
       } finally {
         if (!cancelled) setIsLoading(false);
       }
     };
 
-    loadStoredData();
+    restoreSession();
     return () => { cancelled = true; };
   }, []);
 
