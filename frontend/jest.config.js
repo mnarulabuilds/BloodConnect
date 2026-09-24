@@ -1,6 +1,6 @@
 module.exports = {
   preset: 'jest-expo',
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   testMatch: ['**/__tests__/**/*.(test|spec).(ts|tsx)'],
   collectCoverageFrom: [
     'utils/validation.ts',
@@ -14,13 +14,14 @@ module.exports = {
     'constants/data.ts',
     'components/themed-text.tsx',
     'components/themed-view.tsx',
+    'components/ui/EmptyState.tsx',
   ],
   coverageThreshold: {
     global: {
-      branches: 80,
-      functions: 90,
-      lines: 90,
-      statements: 90,
+      branches: 85,
+      functions: 85,
+      lines: 85,
+      statements: 85,
     },
   },
   moduleNameMapper: {

@@ -1,19 +1,11 @@
-FROM node:20-alpine AS base
+FROM python:3.12-slim AS base
 WORKDIR /app
-COPY package*.json ./
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-FROM base AS deps
-RUN npm ci --only=production
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
-FROM base AS build
-RUN npm ci
 COPY . .
-
-FROM node:20-alpine AS production
-WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=build /app .
 EXPOSE 5000
-USER node
-CMD ["node", "index.js"]
+CMD ["uvicorn", "app.main:combined_app", "--host", "0.0.0.0", "--port", "5000"]

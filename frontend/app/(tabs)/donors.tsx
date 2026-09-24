@@ -11,6 +11,7 @@ import { donorService, chatService } from '@/utils/api';
 import { Platform } from 'react-native';
 import Location from '@/utils/Location';
 import MapView, { Marker, Callout } from '@/utils/Maps';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface Donor {
   id: string;
@@ -295,10 +296,11 @@ export default function DonorsScreen() {
           maxToRenderPerBatch={10}
           windowSize={10}
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="search-outline" size={80} color={theme.border} />
-              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No donors found matching your criteria</Text>
-            </View>
+            <EmptyState
+              icon="search-outline"
+              title="No donors nearby"
+              message="Try clearing filters or widening your search area to discover available donors."
+            />
           }
         />
       )}

@@ -8,6 +8,7 @@ describe('filterSelectOptions', () => {
 
   it('returns all options for empty query', () => {
     expect(filterSelectOptions(options, '')).toHaveLength(2);
+    expect(filterSelectOptions(options, '   ')).toHaveLength(2);
   });
 
   it('filters by label or sublabel', () => {

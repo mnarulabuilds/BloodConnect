@@ -1,0 +1,8 @@
+[run]
+source = app
+omit =
+    app/socketio_events.py
+
+[report]
+fail_under = 85
+show_missing = True

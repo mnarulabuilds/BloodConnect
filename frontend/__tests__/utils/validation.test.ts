@@ -20,5 +20,9 @@ describe('validation utils', () => {
 
     const valid = validateLoginForm('user@example.com', 'Password1');
     expect(valid.isValid).toBe(true);
+
+    const emailOnlyInvalid = validateLoginForm('not-an-email', 'Password1');
+    expect(emailOnlyInvalid.isValid).toBe(false);
+    expect(emailOnlyInvalid.passwordError).toBe('');
   });
 });

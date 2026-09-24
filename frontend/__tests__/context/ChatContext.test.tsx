@@ -91,6 +91,38 @@ describe('ChatContext', () => {
     expect(socket.emit).not.toHaveBeenCalledWith('send_message', expect.anything());
   });
 
+  it('queues joinChat until socket connects', async () => {
+    const handlers: Record<string, () => void> = {};
+    const socket = {
+      on: jest.fn((event: string, cb: () => void) => {
+        handlers[event] = cb;
+      }),
+      emit: jest.fn(),
+      disconnect: jest.fn(),
+      connected: false,
+    };
+    (io as jest.Mock).mockReturnValue(socket);
+    (useAuth as jest.Mock).mockReturnValue({ token: 'token', user: { id: '1' } });
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <ChatProvider>{children}</ChatProvider>
+    );
+
+    const { result } = renderHook(() => useChat(), { wrapper });
+    await waitFor(() => expect(result.current.socket).toBeTruthy());
+
+    act(() => {
+      result.current.joinChat('chat-pending');
+    });
+    expect(socket.emit).not.toHaveBeenCalled();
+
+    socket.connected = true;
+    act(() => {
+      handlers.connect?.();
+    });
+    expect(socket.emit).toHaveBeenCalledWith('join_chat', 'chat-pending');
+  });
+
   it('rejoins active chat on connect event', async () => {
     const handlers: Record<string, () => void> = {};
     const socket = {

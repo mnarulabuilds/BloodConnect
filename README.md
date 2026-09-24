@@ -7,12 +7,9 @@ A full-stack blood donation platform that connects donors and recipients directl
 ```
 BloodConnect/
 ├── backend/          # Express API + Socket.io server
-│   ├── app.js        # Express app factory (HTTP middleware + routes)
-│   ├── server.js     # Process entry: MongoDB, HTTP, Socket.io
-│   ├── config/       # Environment validation, logger
-│   ├── controllers/  # Route handlers
-│   ├── middleware/   # Auth, validation, error handling
-│   └── models/       # Mongoose schemas
+│   ├── app/          # FastAPI application (routers, services, Socket.io)
+│   ├── tests/        # pytest suite
+│   └── requirements.txt
 ├── frontend/         # React Native (Expo) app
 │   ├── app/          # Screens (Expo Router file-based routing)
 │   ├── components/   # Reusable UI components
@@ -30,8 +27,8 @@ BloodConnect/
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React Native, Expo SDK 54, TypeScript, Expo Router |
-| Backend | Node.js, Express 4.x |
-| Database | MongoDB (Mongoose) |
+| Backend | Python 3.12, FastAPI, Socket.io (python-socketio) |
+| Database | MongoDB |
 | Auth | JWT (access + refresh tokens), bcrypt |
 | Real-time | Socket.io (authenticated) |
 | Logging | Pino |
@@ -69,9 +66,10 @@ npm run dev:docker:down
 
 ```bash
 cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
 cp .env.example .env
-npm install
-npm run dev
+uvicorn app.main:combined_app --reload --port 5001
 ```
 
 ### Frontend
@@ -91,8 +89,8 @@ From the repo root:
 npm test
 ```
 
-- **Backend**: ≥90% coverage on controllers and middleware (`npm run test:backend`)
-- **Frontend**: ≥90% line/statement/function coverage on core logic (context, utils, hooks, shared components) (`npm run test:frontend`)
+- **Backend**: ≥85% coverage on Python app code (`npm run test:backend`)
+- **Frontend**: ≥85% coverage on core logic (context, utils, hooks, shared components) (`npm run test:frontend`)
 
 ## Production Docker
 

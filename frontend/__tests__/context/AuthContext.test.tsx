@@ -174,4 +174,21 @@ describe('AuthContext', () => {
   it('throws when hook used outside provider', () => {
     expect(() => renderHook(() => useAuth())).toThrow(/AuthProvider/);
   });
+
+  it('logs when logout cleanup throws unexpectedly', async () => {
+    (authService.logout as jest.Mock).mockResolvedValue({});
+    jest.spyOn(storage, 'getItem').mockResolvedValue(null);
+    jest.spyOn(storage, 'removeItem').mockRejectedValue(new Error('remove failed'));
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.logout();
+    });
+
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
 });
