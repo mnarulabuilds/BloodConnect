@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
+import { filterSelectOptions } from '@/utils/select';
 import {
     Modal, View, Text, TextInput, FlatList, TouchableOpacity,
     StyleSheet, useColorScheme, Platform, Keyboard, Animated,
@@ -52,14 +53,7 @@ export default function SearchableSelect<T = string>({
     const inputRef = useRef<TextInput>(null);
     const slideAnim = useRef(new Animated.Value(300)).current;
 
-    const filtered = useMemo(() => {
-        const q = query.trim().toLowerCase();
-        if (!q) return options;
-        return options.filter(
-            o => o.label.toLowerCase().includes(q) ||
-                (o.sublabel?.toLowerCase().includes(q) ?? false)
-        );
-    }, [query, options]);
+    const filtered = useMemo(() => filterSelectOptions(options, query), [query, options]);
 
     const openModal = () => {
         setQuery('');

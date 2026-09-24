@@ -66,6 +66,9 @@ const Toast = () => {
     return (
         <Animated.View
             pointerEvents={isVisible ? 'auto' : 'none'}
+            accessibilityLiveRegion="polite"
+            accessibilityRole="alert"
+            accessibilityLabel={toast.message}
             style={[
                 styles.container,
                 {

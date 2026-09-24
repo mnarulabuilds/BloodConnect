@@ -66,7 +66,7 @@ exports.getDonors = async (req, res, next) => {
     }
 
     const [donors, totalCount] = await Promise.all([
-      query.skip(skip).limit(limit),
+      query.skip(skip).limit(limit).lean(),
       User.countDocuments(filter),
     ]);
 

@@ -7,19 +7,22 @@ A full-stack blood donation platform that connects donors and recipients directl
 ```
 BloodConnect/
 ├── backend/          # Express API + Socket.io server
+│   ├── app.js        # Express app factory (HTTP middleware + routes)
+│   ├── server.js     # Process entry: MongoDB, HTTP, Socket.io
 │   ├── config/       # Environment validation, logger
 │   ├── controllers/  # Route handlers
-│   ├── middleware/    # Auth, validation, error handling
-│   ├── models/       # Mongoose schemas
-│   └── routes/       # Express route definitions
+│   ├── middleware/   # Auth, validation, error handling
+│   └── models/       # Mongoose schemas
 ├── frontend/         # React Native (Expo) app
 │   ├── app/          # Screens (Expo Router file-based routing)
 │   ├── components/   # Reusable UI components
 │   ├── context/      # React Context providers
 │   ├── constants/    # Theme, static data
 │   ├── types/        # TypeScript interfaces
-│   └── utils/        # API client, storage, platform utils
-└── docker-compose.yml
+│   └── utils/        # API client, storage, validation, accessibility helpers
+├── docker-compose.yml        # Production-style stack (backend + MongoDB)
+├── docker-compose.dev.yml    # Local development stack (frontend + backend + MongoDB)
+└── package.json              # Root scripts (Docker dev, combined tests)
 ```
 
 ## Tech Stack
@@ -32,38 +35,68 @@ BloodConnect/
 | Auth | JWT (access + refresh tokens), bcrypt |
 | Real-time | Socket.io (authenticated) |
 | Logging | Pino |
-| Security | Helmet, express-rate-limit, express-validator |
+| Security | Helmet, express-rate-limit, express-validator, express-mongo-sanitize |
 
-## Getting Started
+## Run locally with Docker (recommended)
 
-### Prerequisites
+One command starts **MongoDB**, **backend (nodemon)**, and **frontend (Expo web)**:
 
-- Node.js 20+
-- MongoDB (local or Atlas)
-- Expo CLI (`npm install -g expo-cli`)
+```bash
+npm run dev:docker
+```
 
-### Backend Setup
+- Web app: [http://localhost:8081](http://localhost:8081)
+- API: [http://localhost:5000](http://localhost:5000)
+- MongoDB: `localhost:27017`
+
+Optional env overrides:
+
+```bash
+export JWT_SECRET="$(openssl rand -hex 32)"
+export CORS_ORIGIN=http://localhost:8081
+npm run dev:docker
+```
+
+Stop:
+
+```bash
+npm run dev:docker:down
+```
+
+## Manual setup
+
+### Backend
 
 ```bash
 cd backend
-cp .env.example .env    # Fill in your values
+cp .env.example .env
 npm install
-npm run dev             # Starts with nodemon on port 5000
+npm run dev
 ```
 
-### Frontend Setup
+### Frontend
 
 ```bash
 cd frontend
-cp .env.example .env    # Set API URL
+cp .env.example .env
 npm install
-npm start               # Starts Expo dev server
+npm start
 ```
 
-### Docker (optional)
+## Testing & coverage
+
+From the repo root:
 
 ```bash
-# From project root
+npm test
+```
+
+- **Backend**: ≥90% coverage on controllers and middleware (`npm run test:backend`)
+- **Frontend**: ≥90% line/statement/function coverage on core logic (context, utils, hooks, shared components) (`npm run test:frontend`)
+
+## Production Docker
+
+```bash
 export JWT_SECRET=your_secret_here
 docker compose up -d
 ```

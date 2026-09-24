@@ -6,6 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { router } from 'expo-router';
 import { ActivityIndicator } from 'react-native';
+import { validateLoginForm } from '@/utils/validation';
+import { a11yButton, a11yTextField } from '@/utils/accessibility';
 
 export default function LoginScreen() {
     const colorScheme = useColorScheme() ?? 'light';
@@ -21,27 +23,11 @@ export default function LoginScreen() {
     const [isLoading, setIsLoading] = useState(false);
 
     const handleLogin = async () => {
-        let hasError = false;
         setGeneralError('');
-
-        if (!email) {
-            setEmailError('Email address is required');
-            hasError = true;
-        } else if (!/\S+@\S+\.\S+/.test(email)) {
-            setEmailError('Please enter a valid email');
-            hasError = true;
-        } else {
-            setEmailError('');
-        }
-
-        if (!password) {
-            setPasswordError('Password is required');
-            hasError = true;
-        } else {
-            setPasswordError('');
-        }
-
-        if (hasError) return;
+        const validation = validateLoginForm(email, password);
+        setEmailError(validation.emailError);
+        setPasswordError(validation.passwordError);
+        if (!validation.isValid) return;
 
         setIsLoading(true);
         try {
@@ -70,7 +56,11 @@ export default function LoginScreen() {
 
                 <View style={styles.form}>
                     {generalError ? (
-                        <View style={[styles.errorBanner, { backgroundColor: theme.error + '15' }]}>
+                        <View
+                            style={[styles.errorBanner, { backgroundColor: theme.error + '15' }]}
+                            accessibilityLiveRegion="polite"
+                            accessibilityRole="alert"
+                        >
                             <Ionicons name="alert-circle" size={20} color={theme.error} />
                             <Text style={[styles.errorBannerText, { color: theme.error }]}>{generalError}</Text>
                         </View>
@@ -92,6 +82,10 @@ export default function LoginScreen() {
                                     if (emailError) setEmailError('');
                                 }}
                                 autoCapitalize="none"
+                                keyboardType="email-address"
+                                textContentType="emailAddress"
+                                autoComplete="email"
+                                {...a11yTextField('Email address', emailError)}
                             />
                         </View>
                         {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
@@ -114,8 +108,14 @@ export default function LoginScreen() {
                                     setPassword(val);
                                     if (passwordError) setPasswordError('');
                                 }}
+                                textContentType="password"
+                                autoComplete="password"
+                                {...a11yTextField('Password', passwordError)}
                             />
-                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                            <TouchableOpacity
+                                onPress={() => setShowPassword(!showPassword)}
+                                {...a11yButton(showPassword ? 'Hide password' : 'Show password')}
+                            >
                                 <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={theme.textSecondary} />
                             </TouchableOpacity>
                         </View>
@@ -125,6 +125,7 @@ export default function LoginScreen() {
                     <TouchableOpacity
                         style={styles.forgotBtn}
                         onPress={() => router.push('/(auth)/forgot-password' as any)}
+                        {...a11yButton('Forgot password', 'Navigate to password reset')}
                     >
                         <Text style={{ color: theme.primary, fontWeight: '600' }}>Forgot Password?</Text>
                     </TouchableOpacity>
@@ -133,6 +134,7 @@ export default function LoginScreen() {
                         style={[styles.loginBtn, { backgroundColor: theme.primary, opacity: isLoading ? 0.8 : 1 }]}
                         onPress={handleLogin}
                         disabled={isLoading}
+                        {...a11yButton('Secure login', 'Sign in to your BloodConnect account')}
                     >
                         {isLoading ? (
                             <ActivityIndicator color="#FFF" />
