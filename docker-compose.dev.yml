@@ -41,13 +41,12 @@ services:
       - '8081:8081'
     environment:
       EXPO_PUBLIC_API_BASE_URL: http://localhost:5001/api
-      CI: 'true'
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
     depends_on:
       - backend
-    command: npx expo start --web --port 8081 --host 0.0.0.0
+    command: npx expo start --web --port 8081 --host lan
 
 volumes:
   mongo_dev_data:
